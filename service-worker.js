@@ -20,16 +20,29 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Action button click - open side panel
 chrome.action.onClicked.addListener((tab) => {
-  // Check if sidePanel API is available (Chrome 114+)
+  openSidePanel(tab.windowId);
+});
+
+// Helper function to open side panel
+function openSidePanel(windowId) {
   if (chrome.sidePanel && chrome.sidePanel.open) {
-    chrome.sidePanel.open({ windowId: tab.windowId });
+    chrome.sidePanel.open({ windowId });
   } else {
     console.warn('Side Panel API not available');
   }
-});
+}
 
 // Message handling
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Handle side panel opening separately
+  if (message.type === 'OPEN_SIDE_PANEL') {
+    const windowId = sender.tab ? sender.tab.windowId : undefined;
+    openSidePanel(windowId);
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  // Route other messages to message handler
   messageHandler.handle(message, sender, sendResponse);
   return true; // Keep channel open for async response
 });
