@@ -2,80 +2,91 @@
 export class ApiClient {
   constructor() {
     this.apiKey = null;
-    this.projectId = null;
     this.loadConfig();
   }
 
   async loadConfig() {
-    const config = await chrome.storage.local.get([
-      'googleCloudApiKey',
-      'googleCloudProjectId'
-    ]);
-    this.apiKey = config.googleCloudApiKey;
-    this.projectId = config.googleCloudProjectId;
+    const config = await chrome.storage.local.get(['openaiApiKey']);
+    this.apiKey = config.openaiApiKey;
   }
 
-  async callGeminiAPI(prompt, imageData = null) {
+  async callOpenAIAPI(prompt, imageData = null) {
     // Reload config to ensure we have the latest key
     await this.loadConfig();
 
     if (!this.apiKey) {
-      throw new Error('Google Cloud API key not configured. Please set it in the extension settings.');
+      throw new Error('OpenAI API key not configured. Please set it in the extension settings.');
     }
 
-    // Use Gemini Pro Vision if image is present, otherwise Gemini Pro
-    const model = imageData ? 'gemini-pro-vision' : 'gemini-pro';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+    // OpenAI API endpoint
+    const url = 'https://api.openai.com/v1/chat/completions';
     
+    // Build messages array
+    const messages = [
+      {
+        role: 'system',
+        content: 'You are Aura, an AI assistant that helps users understand and interact with web content. You can see and analyze web pages to answer questions.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ];
+
     const payload = {
-      contents: [{
-        parts: [
-          { text: prompt }
-        ]
-      }]
+      model: imageData ? 'gpt-4-vision-preview' : 'gpt-4',
+      messages: messages,
+      max_tokens: 2000,
+      temperature: 0.7
     };
 
-    if (imageData) {
-      payload.contents[0].parts.push({
-        inline_data: {
-          mime_type: 'image/png',
-          data: imageData
+    // Add image if provided (for vision models)
+    if (imageData && messages[1].content) {
+      messages[1].content = [
+        { type: 'text', text: prompt },
+        {
+          type: 'image_url',
+          image_url: {
+            url: imageData // OpenAI expects data URL format
+          }
         }
-      });
+      ];
     }
 
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+        const errorMessage = errorData.error?.message || response.statusText;
+        throw new Error(`OpenAI API error: ${response.status} - ${errorMessage}`);
       }
 
       const data = await response.json();
       
-      if (!data.candidates || data.candidates.length === 0) {
-        throw new Error('No response candidates returned from API');
+      if (!data.choices || data.choices.length === 0) {
+        throw new Error('No response choices returned from API');
       }
 
-      const candidate = data.candidates[0];
-      if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-        console.warn(`Response finished with reason: ${candidate.finishReason}`);
+      const choice = data.choices[0];
+      if (choice.finish_reason && choice.finish_reason !== 'stop') {
+        console.warn(`Response finished with reason: ${choice.finish_reason}`);
       }
 
-      if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+      if (!choice.message || !choice.message.content) {
         throw new Error('Empty content in API response');
       }
 
-      return candidate.content.parts[0].text;
+      return choice.message.content;
     } catch (error) {
-      console.error('Gemini API call failed:', error);
+      console.error('OpenAI API call failed:', error);
       throw error;
     }
   }
@@ -84,7 +95,7 @@ export class ApiClient {
     // Implementation for streaming responses (SSE)
     // Will be expanded in Phase 4
     // For now, fall back to non-streaming
-    const response = await this.callGeminiAPI(prompt, imageData);
+    const response = await this.callOpenAIAPI(prompt, imageData);
     onChunk(response);
     return response;
   }

@@ -24,6 +24,14 @@ export function getFirebaseConfig() {
   return null;
 }
 
+export async function getOpenAIConfig() {
+  const stored = await chrome.storage.local.get(['openaiApiKey']);
+  
+  return {
+    apiKey: stored.openaiApiKey || process.env.OPENAI_API_KEY
+  };
+}
+
 export async function getGoogleCloudConfig() {
   const stored = await chrome.storage.local.get(['googleCloudApiKey', 'googleCloudProjectId']);
   

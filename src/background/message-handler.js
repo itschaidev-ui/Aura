@@ -70,7 +70,7 @@ export class MessageHandler {
       await this.stateManager.saveConversation(tabId, conversation);
       
       // Call API
-      const response = await this.apiClient.callGeminiAPI(prompt, imageData);
+      const response = await this.apiClient.callOpenAIAPI(prompt, imageData);
       
       // Save assistant response
       conversation.push({ role: 'assistant', content: response });

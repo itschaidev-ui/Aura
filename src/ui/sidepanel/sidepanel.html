@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Aura Assistant</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="sidepanel-container">
+    <header class="sidepanel-header">
+      <h1>Aura</h1>
+      <button id="settings-btn" class="icon-btn">⚙️</button>
+    </header>
+
+    <div class="chat-container" id="chat-container">
+      <div class="welcome-message">
+        <h2>How can I help you?</h2>
+        <p>Ask me anything about this page, or use the magic dot to get started.</p>
+      </div>
+      <div class="messages" id="messages"></div>
+    </div>
+
+    <div class="input-container">
+      <textarea 
+        id="message-input" 
+        placeholder="Ask a question or give a command..."
+        rows="2"
+      ></textarea>
+      <button id="send-btn" class="send-button">Send</button>
+    </div>
+
+    <div class="draft-viewer" id="draft-viewer" style="display: none;">
+      <h3>Draft</h3>
+      <div id="draft-content"></div>
+      <div class="draft-actions">
+        <button id="copy-draft">Copy</button>
+        <button id="save-draft">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
