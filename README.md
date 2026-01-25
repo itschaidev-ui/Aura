@@ -1,6 +1,6 @@
 # Aura - AI-Powered Browser Assistant
 
-A Chrome extension that provides an intelligent AI assistant directly in your browser, capable of understanding page context, answering questions, and integrating with third-party services.
+A Chrome extension that reads everything on your browser and acts as an AI assistant, powered by ChatGPT. Aura can see and understand any webpage you visit, answer your questions about the content, and help you interact with the web more intelligently.
 
 ## 🎯 Features
 
@@ -10,9 +10,9 @@ A Chrome extension that provides an intelligent AI assistant directly in your br
 - Cross-tab state management
 
 ### Phase 2: Contextual Extraction
-- DOM text extraction
+- Reads all content from any webpage (DOM text extraction)
 - Screenshot capture for visual analysis
-- Multimodal LLM integration
+- Processes page content for ChatGPT understanding
 
 ### Phase 3: Overlay & Side Panel UI
 - Non-intrusive Shadow DOM overlay
@@ -21,7 +21,7 @@ A Chrome extension that provides an intelligent AI assistant directly in your br
 
 ### Phase 4: Integration & Workflow Actions
 - Third-party API integrations (Notion, Slack, GitHub)
-- Server-Sent Events (SSE) for streaming responses
+- Server-Sent Events (SSE) for streaming ChatGPT responses
 - Workflow automation actions
 
 ## 📋 Project Status
@@ -66,14 +66,16 @@ See [DIRECTORY_STRUCTURE.md](./DIRECTORY_STRUCTURE.md) for complete file structu
 ### Environment Variables
 Create a `.env` file (not committed to git):
 ```
-OPENAI_API_KEY=your_key_here
-GEMINI_API_KEY=your_key_here
+OPENAI_API_KEY=your_chatgpt_api_key_here
 NOTION_API_KEY=your_key_here
 SLACK_API_TOKEN=your_token_here
 ```
 
+**Note:** Aura uses the OpenAI API (ChatGPT) as its primary AI engine.
+
 ## 📚 Documentation
 
+- [GOALS.md](./GOALS.md) - Project goals and mission statement
 - [PROJECT_ANALYSIS.md](./PROJECT_ANALYSIS.md) - Detailed phase-by-phase breakdown
 - [DIRECTORY_STRUCTURE.md](./DIRECTORY_STRUCTURE.md) - File structure and organization
 - [GITHUB_ANALYSIS.md](./GITHUB_ANALYSIS.md) - Repository setup and workflow

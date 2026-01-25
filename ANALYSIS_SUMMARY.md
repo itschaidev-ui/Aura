@@ -2,6 +2,8 @@
 
 ## Executive Summary
 
+**Project Goal:** Aura is a Chrome extension that reads everything on your browser and acts as an AI assistant, powered by ChatGPT, to answer your questions about any webpage you visit.
+
 **Project Status:** 🟡 Empty repository, ready for development
 **GitHub Repository:** `https://github.com/itschaidev-ui/Aura.git`
 **Current Phase:** Pre-Phase 1 (Project initialization)
@@ -36,7 +38,7 @@ Aura/
 **Purpose:** Extension's "nervous system"
 - Manifest V3 configuration
 - Background service worker
-- AI API communication layer
+- ChatGPT API communication layer
 - Cross-tab state management
 
 **Key Files:**
@@ -46,10 +48,11 @@ Aura/
 - `src/background/state-manager.js`
 
 ### Phase 2: Contextual Extraction ⏳ Not Started
-**Purpose:** AI's "eyes" - see what user is doing
-- DOM text extraction
+**Purpose:** AI's "eyes" - read everything on the browser
+- DOM text extraction (reads all page content)
 - Screenshot capture (`chrome.tabs.captureVisibleTab`)
-- Context preprocessing for multimodal LLM
+- Context preprocessing for ChatGPT
+- Full browser content reading capability
 
 **Key Files:**
 - `src/content/content-script.js`
@@ -129,8 +132,8 @@ Aura/
 - `chrome.runtime` - Message passing
 
 ### External APIs
-- AI: Gemini API / OpenAI API
-- Integrations: Notion API, Slack Web API, GitHub API
+- **AI:** OpenAI API (ChatGPT) - Primary AI engine for answering questions
+- **Integrations:** Notion API, Slack Web API, GitHub API
 
 ---
 

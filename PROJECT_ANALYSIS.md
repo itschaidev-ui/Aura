@@ -26,7 +26,7 @@ Aura/
 ├── service-worker.js                # Background service worker
 ├── src/
 │   ├── background/
-│   │   ├── api-client.js           # AI API communication (Gemini/OpenAI)
+│   │   ├── api-client.js           # ChatGPT API communication
 │   │   ├── state-manager.js        # Cross-tab state management
 │   │   └── message-handler.js      # Message routing
 │   └── utils/
@@ -104,7 +104,7 @@ Aura/
   - [ ] `scripting` permission
   - [ ] Background service worker registration
 - [ ] `service-worker.js` implementation
-  - [ ] AI API communication layer
+  - [ ] ChatGPT API communication layer
   - [ ] Cross-tab state management
   - [ ] Message passing infrastructure
   - [ ] Storage management
@@ -124,8 +124,9 @@ Aura/
 - [ ] Content script registration in manifest
 - [ ] DOM text extraction logic
 - [ ] Screenshot capture using `chrome.tabs.captureVisibleTab`
-- [ ] Context preprocessing for multimodal LLM
+- [ ] Context preprocessing for ChatGPT
 - [ ] Data sanitization and prompt formatting
+- [ ] Full browser content reading capability
 
 **Key Files to Create:**
 1. `src/content/content-script.js`
@@ -192,7 +193,7 @@ Aura/
 ```
 
 ### API Integration Requirements
-- **AI APIs:** Gemini API / OpenAI API
+- **AI API:** OpenAI API (ChatGPT) - Primary AI engine
 - **Third-party:** Notion API, Slack Web API, GitHub API
 - **Authentication:** OAuth 2.0 flows for each service
 
@@ -229,10 +230,18 @@ Aura/
 
 ---
 
+## Project Goal
+
+**Aura** is a Chrome extension that:
+- **Reads everything** on your browser - can access and understand any webpage content
+- **Acts as an AI assistant** - answers your questions about what you're viewing
+- **Powered by ChatGPT** - uses OpenAI's API to provide intelligent responses
+
 ## Notes
 
 - **Security:** All API keys should be stored securely (not in code)
 - **Privacy:** Screenshot and DOM data should be processed securely
 - **Performance:** Service worker should be lightweight and efficient
 - **Compatibility:** Target Chrome 114+ for side panel support
+- **Core Function:** The extension must be able to read and understand all browser content to answer user questions effectively
 
