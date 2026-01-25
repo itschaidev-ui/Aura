@@ -1,8 +1,32 @@
 # API Keys Setup Guide
 
-This document explains what API keys and credentials you need for the Aura Chrome Extension, which uses Google Cloud services (Firebase backend and Google Cloud APIs).
+This document explains what API keys and credentials you need for the Aura Chrome Extension.
 
-## Required Google Cloud Setup
+**Aura's Primary Goal:** Read everything on your browser and answer questions using ChatGPT.
+
+## Required API Keys
+
+### 1. **OpenAI API Key (ChatGPT) - REQUIRED** ⭐
+- **Purpose:** Primary AI engine for answering questions about browser content
+- **Where to get it:**
+  1. Go to https://platform.openai.com/api-keys
+  2. Sign in or create an account
+  3. Click "Create new secret key"
+  4. Give it a name (e.g., "Aura Extension")
+  5. Copy the key immediately (you won't see it again!)
+  6. Store it securely
+
+**Cost:** Pay-as-you-go. Check https://openai.com/pricing
+
+**Important:** This is the **primary API key** needed for Aura to function. All AI responses are powered by ChatGPT.
+
+---
+
+## Optional: Google Cloud Setup
+
+The following are optional if you plan to use Google Cloud services (Firebase backend, etc.):
+
+### 2. **Google Cloud Project** (Optional)
 
 ### 1. **Google Cloud Project** (Required)
 - **Purpose:** Central project that manages all Google Cloud services (Firebase, APIs, etc.)
@@ -20,7 +44,7 @@ This document explains what API keys and credentials you need for the Aura Chrom
 
 ---
 
-### 2. **Firebase Configuration** (Required for Backend)
+### 3. **Firebase Configuration** (Optional - for Backend)
 - **Purpose:** Backend services (Firestore, Authentication, Functions, etc.)
 - **Where to set it up:**
   1. Go to https://console.firebase.google.com/
@@ -54,7 +78,7 @@ This document explains what API keys and credentials you need for the Aura Chrom
 
 ---
 
-### 3. **Google Cloud API Key** (Required for Chrome Extension)
+### 4. **Google Cloud API Key** (Optional - for Chrome Extension)
 - **Purpose:** Authenticate API calls from the Chrome extension to Google Cloud services
 - **Where to get it:**
   1. Go to https://console.cloud.google.com/apis/credentials
@@ -77,7 +101,7 @@ This document explains what API keys and credentials you need for the Aura Chrom
 
 ---
 
-### 4. **Service Account (Optional - for Server-side Operations)**
+### 5. **Service Account (Optional - for Server-side Operations)**
 - **Purpose:** For backend/server operations that need elevated permissions
 - **Where to create it:**
   1. Go to https://console.cloud.google.com/iam-admin/serviceaccounts
@@ -104,10 +128,13 @@ This document explains what API keys and credentials you need for the Aura Chrom
 Create a `.env` file in your project root:
 
 ```env
-# Google Cloud Project
+# ChatGPT API (REQUIRED - Primary AI Engine)
+OPENAI_API_KEY=sk-...
+
+# Optional: Google Cloud Project
 GOOGLE_CLOUD_PROJECT_ID=your-project-id
 
-# Firebase Configuration
+# Optional: Firebase Configuration
 FIREBASE_API_KEY=AIza...
 FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 FIREBASE_PROJECT_ID=your-project-id
@@ -115,7 +142,7 @@ FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 FIREBASE_MESSAGING_SENDER_ID=123456789
 FIREBASE_APP_ID=1:123456789:web:abc123
 
-# Google Cloud API Key (for extension)
+# Optional: Google Cloud API Key (for extension)
 GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
 
@@ -263,12 +290,19 @@ admin.initializeApp({
 
 ## Quick Start Checklist
 
-1. ✅ **Create Google Cloud Project**
+1. ✅ **Get OpenAI API Key (REQUIRED)** ⭐
+   - Go to https://platform.openai.com/api-keys
+   - Create account or sign in
+   - Create new secret key
+   - Copy and store securely
+   - This is the **primary key** needed for Aura
+
+2. ✅ **Create Google Cloud Project** (Optional)
    - Go to https://console.cloud.google.com/
    - Create new project
    - Note your Project ID
 
-2. ✅ **Set up Firebase**
+3. ✅ **Set up Firebase** (Optional)
    - Go to https://console.firebase.google.com/
    - Add project (or link existing Google Cloud project)
    - Register web app
@@ -276,21 +310,26 @@ admin.initializeApp({
    - Enable Firestore Database
    - Enable Authentication
 
-3. ✅ **Create API Key**
+4. ✅ **Create Google Cloud API Key** (Optional)
    - Go to https://console.cloud.google.com/apis/credentials
    - Create API key
    - **Restrict it** (HTTP referrers + API restrictions)
 
-4. ✅ **Enable Required APIs**
+5. ✅ **Enable Required APIs** (Optional)
    - Go to https://console.cloud.google.com/apis/library
    - Enable Cloud AI Platform API, Cloud Functions API, etc.
 
-5. ✅ **Configure Extension**
+6. ✅ **Configure Extension**
    - Create `.env` file (for development)
+   - Add `OPENAI_API_KEY` (required)
+   - Add Google Cloud/Firebase config (optional)
    - Or create settings page (for production)
-   - Store Firebase config and API key
+   - Store keys in `chrome.storage.local`
 
-6. ✅ **Test Configuration**
+7. ✅ **Test Configuration**
+   - Test ChatGPT API connection
+   - Test Firebase connection (if using)
+   - Test Google Cloud API key (if using)
    - Test Firebase connection
    - Test API key with a simple request
    - Verify security rules are working
