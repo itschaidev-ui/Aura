@@ -28,7 +28,7 @@ A Chrome extension that provides an intelligent AI assistant directly in your br
 
 **Current Phase:** Pre-Phase 1 (Project initialization)
 
-See [PROJECT_ANALYSIS.md](./PROJECT_ANALYSIS.md) for detailed implementation plan.
+**📖 See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for the complete step-by-step implementation guide.**
 
 ## 🚀 Getting Started
 
@@ -93,6 +93,7 @@ GOOGLE_CLOUD_API_KEY=your-api-key-here
 
 ## 📚 Documentation
 
+- [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) - **🚀 Complete step-by-step implementation guide for all 4 phases**
 - [API_KEYS_SETUP.md](./API_KEYS_SETUP.md) - **Complete guide to obtaining and configuring API keys**
 - [PROJECT_ANALYSIS.md](./PROJECT_ANALYSIS.md) - Detailed phase-by-phase breakdown
 - [DIRECTORY_STRUCTURE.md](./DIRECTORY_STRUCTURE.md) - File structure and organization
