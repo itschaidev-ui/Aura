@@ -1,26 +1,11 @@
 // service-worker.js
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
 import { StateManager } from './src/background/state-manager.js';
 import { MessageHandler } from './src/background/message-handler.js';
 import { ApiClient } from './src/background/api-client.js';
-import { getFirebaseConfig } from './src/utils/config.js';
-
-// Initialize Firebase
-const firebaseConfig = getFirebaseConfig();
-// Only initialize if config is valid (prevent errors during initial setup)
-let app, db;
-if (firebaseConfig && firebaseConfig.apiKey) {
-  try {
-    app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-  } catch (error) {
-    console.error('Firebase initialization error:', error);
-  }
-}
 
 // Initialize managers
-const stateManager = new StateManager(db);
+// Firebase is optional - pass null for db if not configured
+const stateManager = new StateManager(null);
 const apiClient = new ApiClient();
 const messageHandler = new MessageHandler(stateManager, apiClient);
 
@@ -29,8 +14,7 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('Aura extension installed');
   // Set default settings
   chrome.storage.local.set({
-    apiKey: null,
-    firebaseConfig: firebaseConfig
+    openaiApiKey: null
   });
 });
 
