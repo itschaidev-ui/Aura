@@ -2,39 +2,70 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aura Assistant</title>
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
   <div class="sidepanel-container">
     <header class="sidepanel-header">
-      <h1>Aura</h1>
-      <button id="settings-btn" class="icon-btn">⚙️</button>
+      <div class="header-content">
+        <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
+            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h1>Aura</h1>
+        </div>
+        <div class="header-actions">
+          <button id="settings-btn" class="icon-btn" title="Settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="context-indicator" id="context-indicator">
+        <span class="context-dot"></span>
+        <span class="context-text">Reading page context...</span>
+      </div>
     </header>
 
     <div class="chat-container" id="chat-container">
-      <div class="welcome-message">
-        <h2>How can I help you?</h2>
-        <p>Ask me anything about this page, or use the magic dot to get started.</p>
+      <div class="welcome-message" id="welcome-message">
+        <div class="welcome-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <h2>Intelligence at your fingertips</h2>
+        <p>Aura understands what you're viewing and can answer questions, summarize content, and help you work smarter.</p>
+        <div class="quick-actions">
+          <button class="quick-action-btn" data-action="summarize">Summarize this page</button>
+          <button class="quick-action-btn" data-action="explain">Explain key points</button>
+        </div>
       </div>
       <div class="messages" id="messages"></div>
     </div>
 
     <div class="input-container">
-      <textarea 
-        id="message-input" 
-        placeholder="Ask a question or give a command..."
-        rows="2"
-      ></textarea>
-      <button id="send-btn" class="send-button">Send</button>
-    </div>
-
-    <div class="draft-viewer" id="draft-viewer" style="display: none;">
-      <h3>Draft</h3>
-      <div id="draft-content"></div>
-      <div class="draft-actions">
-        <button id="copy-draft">Copy</button>
-        <button id="save-draft">Save</button>
+      <div class="input-wrapper">
+        <textarea 
+          id="message-input" 
+          placeholder="Ask Aura anything about this page..."
+          rows="1"
+        ></textarea>
+        <button id="send-btn" class="send-button" title="Send message">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+      <div class="input-footer">
+        <span class="input-hint">Press Enter to send, Shift+Enter for new line</span>
       </div>
     </div>
   </div>

@@ -3,6 +3,7 @@ class SidePanel {
   constructor() {
     this.messages = [];
     this.currentTabId = null;
+    this.isLoading = false;
     this.init();
   }
 
@@ -11,17 +12,14 @@ class SidePanel {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     this.currentTabId = tab.id;
 
+    // Update context indicator
+    this.updateContextIndicator(tab.url);
+
     // Load conversation history
     await this.loadConversation();
 
     // Set up event listeners
-    document.getElementById('send-btn').addEventListener('click', () => this.sendMessage());
-    document.getElementById('message-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this.sendMessage();
-      }
-    });
+    this.setupEventListeners();
 
     // Listen for messages from service worker
     chrome.runtime.onMessage.addListener((message) => {
@@ -29,34 +27,111 @@ class SidePanel {
     });
   }
 
-  async loadConversation() {
-    const response = await chrome.runtime.sendMessage({
-      type: 'GET_CONVERSATION',
-      tabId: this.currentTabId
+  setupEventListeners() {
+    const sendBtn = document.getElementById('send-btn');
+    const input = document.getElementById('message-input');
+    const quickActions = document.querySelectorAll('.quick-action-btn');
+
+    // Send button
+    sendBtn.addEventListener('click', () => this.sendMessage());
+
+    // Input handling
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.sendMessage();
+      }
     });
 
-    if (response.conversation) {
-      this.messages = response.conversation;
-      this.renderMessages();
+    // Auto-resize textarea
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+
+    // Quick action buttons
+    quickActions.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const action = e.target.dataset.action;
+        this.handleQuickAction(action);
+      });
+    });
+  }
+
+  updateContextIndicator(url) {
+    const indicator = document.getElementById('context-indicator');
+    const text = indicator.querySelector('.context-text');
+    
+    try {
+      const urlObj = new URL(url);
+      const domain = urlObj.hostname.replace('www.', '');
+      text.textContent = `Reading ${domain}...`;
+      
+      // Update after a moment to show it's ready
+      setTimeout(() => {
+        text.textContent = `Ready - ${domain}`;
+        indicator.querySelector('.context-dot').style.background = 'var(--success)';
+      }, 1000);
+    } catch (e) {
+      text.textContent = 'Ready';
     }
   }
 
+  async loadConversation() {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_CONVERSATION',
+        tabId: this.currentTabId
+      });
+
+      if (response && response.conversation) {
+        this.messages = response.conversation;
+        this.renderMessages();
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+    }
+  }
+
+  async handleQuickAction(action) {
+    const input = document.getElementById('message-input');
+    
+    switch (action) {
+      case 'summarize':
+        input.value = 'Summarize this page for me';
+        break;
+      case 'explain':
+        input.value = 'Explain the key points on this page';
+        break;
+    }
+    
+    input.focus();
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    
+    // Auto-send after a brief delay
+    setTimeout(() => this.sendMessage(), 100);
+  }
+
   async sendMessage() {
+    if (this.isLoading) return;
+    
     const input = document.getElementById('message-input');
     const text = input.value.trim();
     
     if (!text) return;
 
-    // Add user message to UI
-    this.addMessage('user', text);
-    input.value = '';
-
-    // Disable send button
+    this.isLoading = true;
     const sendBtn = document.getElementById('send-btn');
     sendBtn.disabled = true;
 
-    // Show loading indicator
-    const loadingId = this.addMessage('assistant', '...', true);
+    // Add user message to UI
+    this.addMessage('user', text);
+    input.value = '';
+    input.style.height = 'auto';
+
+    // Show typing indicator
+    const typingId = this.showTypingIndicator();
 
     try {
       // Get page context
@@ -75,66 +150,110 @@ class SidePanel {
         tabId: this.currentTabId
       });
 
+      // Remove typing indicator
+      this.removeTypingIndicator(typingId);
+
       if (aiResponse.error) {
         throw new Error(aiResponse.error);
       }
 
-      // Update loading message with response
-      this.updateMessage(loadingId, 'assistant', aiResponse.response);
+      // Add assistant response
+      this.addMessage('assistant', aiResponse.response);
     } catch (error) {
-      this.updateMessage(loadingId, 'assistant', `Error: ${error.message}`);
+      this.removeTypingIndicator(typingId);
+      this.addMessage('assistant', `Sorry, I encountered an error: ${error.message}. Please check your API key in settings.`, true);
     } finally {
+      this.isLoading = false;
       sendBtn.disabled = false;
+      input.focus();
     }
   }
 
-  addMessage(role, content, isLoading = false) {
+  showTypingIndicator() {
     const messagesContainer = document.getElementById('messages');
-    const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+    const typingDiv = document.createElement('div');
+    const id = `typing-${Date.now()}`;
+    typingDiv.id = id;
+    typingDiv.className = 'message assistant typing';
+    
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'typing-dot';
+      typingDiv.appendChild(dot);
+    }
+    
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    return id;
+  }
+
+  removeTypingIndicator(id) {
+    const typingDiv = document.getElementById(id);
+    if (typingDiv) {
+      typingDiv.remove();
+    }
+  }
+
+  addMessage(role, content, isError = false) {
+    const messagesContainer = document.getElementById('messages');
+    const welcomeMessage = document.getElementById('welcome-message');
     if (welcomeMessage) {
-      welcomeMessage.remove();
+      welcomeMessage.style.display = 'none';
     }
 
     const messageDiv = document.createElement('div');
-    const id = `msg-${Date.now()}`;
+    const id = `msg-${Date.now()}-${Math.random()}`;
     messageDiv.id = id;
     messageDiv.className = `message ${role}`;
-    messageDiv.textContent = content;
+    
+    if (isError) {
+      messageDiv.style.borderLeft = '3px solid var(--error)';
+    }
+    
+    // Format message content (basic markdown-like formatting)
+    messageDiv.innerHTML = this.formatMessage(content);
     
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-    if (!isLoading) {
-      this.messages.push({ role, content });
-    }
-
+    this.messages.push({ role, content });
+    
     return id;
   }
 
-  updateMessage(id, role, content) {
-    const messageDiv = document.getElementById(id);
-    if (messageDiv) {
-      messageDiv.textContent = content;
-      messageDiv.className = `message ${role}`;
-    }
-
-    // Update in messages array
-    const index = this.messages.findIndex(m => m.role === role && m.content === '...');
-    if (index !== -1) {
-      this.messages[index] = { role, content };
-    }
+  formatMessage(text) {
+    // Basic formatting: code blocks, inline code, bold, links
+    let formatted = text
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    
+    // Code blocks
+    formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    
+    // Line breaks
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    return formatted;
   }
 
   renderMessages() {
     const messagesContainer = document.getElementById('messages');
+    const welcomeMessage = document.getElementById('welcome-message');
+    
     messagesContainer.innerHTML = '';
 
     if (this.messages.length === 0) {
-      const welcome = document.createElement('div');
-      welcome.className = 'welcome-message';
-      welcome.innerHTML = '<h2>How can I help you?</h2><p>Ask me anything about this page, or use the magic dot to get started.</p>';
-      messagesContainer.appendChild(welcome);
+      if (welcomeMessage) {
+        welcomeMessage.style.display = 'block';
+      }
       return;
+    }
+
+    if (welcomeMessage) {
+      welcomeMessage.style.display = 'none';
     }
 
     this.messages.forEach(msg => {
@@ -145,6 +264,8 @@ class SidePanel {
   handleMessage(message) {
     if (message.type === 'NEW_RESPONSE') {
       this.addMessage('assistant', message.data);
+    } else if (message.type === 'CONTEXT_UPDATED') {
+      this.updateContextIndicator(message.url);
     }
   }
 }
