@@ -18,9 +18,9 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Action button click - open side panel
+// Action button click - open floating UI or side panel
 chrome.action.onClicked.addListener((tab) => {
-  openSidePanel(tab.windowId);
+  openFloatingUI(tab.id);
 });
 
 // Helper function to open side panel
@@ -32,12 +32,31 @@ function openSidePanel(windowId) {
   }
 }
 
+// Helper function to open floating UI
+function openFloatingUI(tabId) {
+  chrome.tabs.sendMessage(tabId, { type: 'OPEN_AURA' }).catch(() => {
+    // Content script might not be ready, try opening side panel as fallback
+    chrome.tabs.get(tabId, (tab) => {
+      if (tab) {
+        openSidePanel(tab.windowId);
+      }
+    });
+  });
+}
+
 // Message handling
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Handle side panel opening separately
   if (message.type === 'OPEN_SIDE_PANEL') {
     const windowId = sender.tab ? sender.tab.windowId : undefined;
     openSidePanel(windowId);
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  // Handle floating UI opening
+  if (message.type === 'OPEN_AURA' && sender.tab) {
+    openFloatingUI(sender.tab.id);
     sendResponse({ success: true });
     return true;
   }
