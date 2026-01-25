@@ -63,17 +63,37 @@ See [DIRECTORY_STRUCTURE.md](./DIRECTORY_STRUCTURE.md) for complete file structu
 
 ## 🔧 Configuration
 
-### Environment Variables
-Create a `.env` file (not committed to git):
+### API Keys Setup
+**📖 See [API_KEYS_SETUP.md](./API_KEYS_SETUP.md) for detailed instructions on obtaining and configuring API keys.**
+
+**Required Setup:**
+- **Google Cloud Project** - Central project for all services
+- **Firebase Configuration** - Backend services (Firestore, Auth, etc.)
+- **Google Cloud API Key** - For Chrome extension API calls
+
+**Quick Setup:**
+Create a `.env` file (not committed to git) for local development:
+```env
+# Google Cloud Project
+GOOGLE_CLOUD_PROJECT_ID=your-project-id
+
+# Firebase Configuration
+FIREBASE_API_KEY=AIza...
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+FIREBASE_MESSAGING_SENDER_ID=123456789
+FIREBASE_APP_ID=1:123456789:web:abc123
+
+# Google Cloud API Key
+GOOGLE_CLOUD_API_KEY=your-api-key-here
 ```
-OPENAI_API_KEY=your_key_here
-GEMINI_API_KEY=your_key_here
-NOTION_API_KEY=your_key_here
-SLACK_API_TOKEN=your_token_here
-```
+
+**Note:** For production, use a settings page to store keys in `chrome.storage.local` instead of `.env` files.
 
 ## 📚 Documentation
 
+- [API_KEYS_SETUP.md](./API_KEYS_SETUP.md) - **Complete guide to obtaining and configuring API keys**
 - [PROJECT_ANALYSIS.md](./PROJECT_ANALYSIS.md) - Detailed phase-by-phase breakdown
 - [DIRECTORY_STRUCTURE.md](./DIRECTORY_STRUCTURE.md) - File structure and organization
 - [GITHUB_ANALYSIS.md](./GITHUB_ANALYSIS.md) - Repository setup and workflow
