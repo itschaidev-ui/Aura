@@ -28,7 +28,7 @@ A Chrome extension that reads everything on your browser and acts as an AI assis
 
 **Current Phase:** Pre-Phase 1 (Project initialization)
 
-See [PROJECT_ANALYSIS.md](./PROJECT_ANALYSIS.md) for detailed implementation plan.
+**📖 See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for the complete step-by-step implementation guide.**
 
 ## 🚀 Getting Started
 
@@ -100,7 +100,8 @@ FIREBASE_APP_ID=1:123456789:web:abc123
 ## 📚 Documentation
 
 - [GOALS.md](./GOALS.md) - Project goals and mission statement
-- [API_KEYS_SETUP.md](./API_KEYS_SETUP.md) - Complete guide to obtaining and configuring API keys (if available)
+- [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) - **🚀 Complete step-by-step implementation guide for all 4 phases**
+- [API_KEYS_SETUP.md](./API_KEYS_SETUP.md) - **Complete guide to obtaining and configuring API keys**
 - [PROJECT_ANALYSIS.md](./PROJECT_ANALYSIS.md) - Detailed phase-by-phase breakdown
 - [DIRECTORY_STRUCTURE.md](./DIRECTORY_STRUCTURE.md) - File structure and organization
 - [GITHUB_ANALYSIS.md](./GITHUB_ANALYSIS.md) - Repository setup and workflow
