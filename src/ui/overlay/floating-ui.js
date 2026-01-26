@@ -5,6 +5,7 @@ class FloatingUI {
     this.mainWindow = null;
     this.isWindowOpen = false;
     this.shadowRoot = null;
+    this.currentContext = null;
     this.init();
   }
 
@@ -491,14 +492,14 @@ class FloatingUI {
     const recentActivity = document.createElement('div');
     recentActivity.className = 'recent-activity';
     recentActivity.innerHTML = `
-      <div class="section-title">Recent Activity</div>
-      <div class="activity-item">
+      <div class="section-title">Context</div>
+      <div class="activity-item" id="context-item">
         <div class="activity-icon" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
         </div>
-        <div class="activity-text">Ready to help with this page</div>
+        <div class="activity-text">Reading current page...</div>
       </div>
     `;
     
@@ -582,16 +583,43 @@ class FloatingUI {
     input.blur();
   }
 
-  openMainWindow(initialQuery = '') {
+  async openMainWindow(initialQuery = '') {
     this.isWindowOpen = true;
     this.mainWindow.classList.add('visible');
     this.backdrop.classList.add('visible');
     this.hideCommandBar();
     
+    // Update context display
+    this.updateContextDisplay();
+    
+    // Request fresh context
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_PAGE_CONTEXT'
+      });
+      if (response && response.context) {
+        this.currentContext = response.context;
+        this.updateContextDisplay();
+      }
+    } catch (e) {
+      console.log('Failed to get context', e);
+    }
+    
     if (initialQuery) {
       const input = this.mainWindow.querySelector('.input-field');
       input.value = initialQuery;
       this.sendMessage(initialQuery);
+    }
+  }
+  
+  updateContextDisplay() {
+    const activityText = this.mainWindow.querySelector('.activity-text');
+    if (this.currentContext && this.currentContext.title) {
+      activityText.textContent = `Reading: ${this.currentContext.title}`;
+    } else if (document.title) {
+      activityText.textContent = `Reading: ${document.title}`;
+    } else {
+      activityText.textContent = 'Reading current page...';
     }
   }
 
@@ -621,15 +649,17 @@ class FloatingUI {
     messagesContainer.appendChild(typingMsg);
     
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      // Get context if we don't have it
+      if (!this.currentContext) {
+        // We'll rely on the background script to fetch it via message handler
+      }
       
       const response = await chrome.runtime.sendMessage({
         type: 'SEND_MESSAGE',
         data: {
           prompt: text,
-          context: {}
-        },
-        tabId: tab.id
+          context: this.currentContext // Pass current context if available
+        }
       });
       
       typingMsg.remove();
@@ -640,16 +670,31 @@ class FloatingUI {
       
       const assistantMsg = document.createElement('div');
       assistantMsg.className = 'message assistant';
-      assistantMsg.textContent = response.response;
+      assistantMsg.innerHTML = this.formatMessage(response.response);
       messagesContainer.appendChild(assistantMsg);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } catch (error) {
       typingMsg.remove();
       const errorMsg = document.createElement('div');
       errorMsg.className = 'message assistant';
+      errorMsg.style.color = '#ef4444';
       errorMsg.textContent = `Error: ${error.message}`;
       messagesContainer.appendChild(errorMsg);
     }
+  }
+  
+  formatMessage(text) {
+    // Basic formatting: code blocks, inline code, bold, links
+    let formatted = text
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color: #6366f1;">$1</a>');
+    
+    // Line breaks
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    return formatted;
   }
 }
 

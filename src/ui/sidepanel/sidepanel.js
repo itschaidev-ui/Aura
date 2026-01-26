@@ -4,6 +4,7 @@ class SidePanel {
     this.messages = [];
     this.currentTabId = null;
     this.isLoading = false;
+    this.currentContext = null;
     this.init();
   }
 
@@ -11,9 +12,6 @@ class SidePanel {
     // Get current tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     this.currentTabId = tab.id;
-
-    // Update context indicator
-    this.updateContextIndicator(tab.url);
 
     // Load conversation history
     await this.loadConversation();
@@ -25,6 +23,23 @@ class SidePanel {
     chrome.runtime.onMessage.addListener((message) => {
       this.handleMessage(message);
     });
+    
+    // Initial context update
+    this.updateContext(tab.url, tab.title);
+    
+    // Request fresh context
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_PAGE_CONTEXT',
+        tabId: this.currentTabId
+      });
+      if (response && response.context) {
+        this.currentContext = response.context;
+        this.updateContext(response.context.url, response.context.title);
+      }
+    } catch (e) {
+      console.log('Failed to get context', e);
+    }
   }
 
   setupEventListeners() {
@@ -58,20 +73,21 @@ class SidePanel {
     });
   }
 
-  updateContextIndicator(url) {
+  updateContext(url, title) {
     const indicator = document.getElementById('context-indicator');
     const text = indicator.querySelector('.context-text');
+    const dot = indicator.querySelector('.context-dot');
     
     try {
-      const urlObj = new URL(url);
-      const domain = urlObj.hostname.replace('www.', '');
-      text.textContent = `Reading ${domain}...`;
+      if (title) {
+        text.textContent = `Reading: ${title.substring(0, 30)}${title.length > 30 ? '...' : ''}`;
+      } else {
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname.replace('www.', '');
+        text.textContent = `Reading ${domain}...`;
+      }
       
-      // Update after a moment to show it's ready
-      setTimeout(() => {
-        text.textContent = `Ready - ${domain}`;
-        indicator.querySelector('.context-dot').style.background = 'var(--success)';
-      }, 1000);
+      dot.style.background = 'var(--success)';
     } catch (e) {
       text.textContent = 'Ready';
     }
@@ -134,18 +150,17 @@ class SidePanel {
     const typingId = this.showTypingIndicator();
 
     try {
-      // Get page context
-      const contextResponse = await chrome.runtime.sendMessage({
-        type: 'GET_PAGE_CONTEXT',
-        tabId: this.currentTabId
-      });
+      // Get fresh context if we don't have it
+      if (!this.currentContext) {
+        // We'll rely on the background script to fetch it via message handler
+      }
 
       // Send to AI
       const aiResponse = await chrome.runtime.sendMessage({
         type: 'SEND_MESSAGE',
         data: {
           prompt: text,
-          context: contextResponse.context
+          context: this.currentContext
         },
         tabId: this.currentTabId
       });
@@ -265,7 +280,8 @@ class SidePanel {
     if (message.type === 'NEW_RESPONSE') {
       this.addMessage('assistant', message.data);
     } else if (message.type === 'CONTEXT_UPDATED') {
-      this.updateContextIndicator(message.url);
+      // Background script notified us of context update
+      // We could fetch new context here, but we'll wait for next interaction
     }
   }
 }

@@ -1,4 +1,6 @@
 // src/background/message-handler.js
+import { ContextProcessor } from '../content/context-processor.js';
+
 export class MessageHandler {
   constructor(stateManager, apiClient) {
     this.stateManager = stateManager;
@@ -51,8 +53,25 @@ export class MessageHandler {
       return;
     }
     
+    // First check if we have stored context (basic)
     const tabState = this.stateManager.getTabState(tabId);
-    sendResponse({ context: tabState });
+    
+    // Try to get fresh full context from content script
+    try {
+      const response = await chrome.tabs.sendMessage(tabId, { type: 'GET_CONTEXT' });
+      if (response && response.context) {
+        // Update stored state with basic info
+        this.stateManager.updateTabState(tabId, response.context.url);
+        sendResponse({ context: response.context });
+        return;
+      }
+    } catch (error) {
+      // Content script might not be ready or page doesn't support it
+      // Fall back to stored basic state
+      console.log('Failed to get context from content script, using stored state', error);
+    }
+    
+    sendResponse({ context: tabState || { url: '', title: '' } });
   }
 
   async handleSendMessage(data, tabId, sendResponse) {
@@ -61,7 +80,7 @@ export class MessageHandler {
       return;
     }
 
-    const { prompt, imageData } = data;
+    const { prompt, context } = data;
     
     try {
       // Save user message immediately
@@ -69,8 +88,30 @@ export class MessageHandler {
       conversation.push({ role: 'user', content: prompt });
       await this.stateManager.saveConversation(tabId, conversation);
       
+      // Format prompt with context if available
+      let finalPrompt = prompt;
+      let imageData = null;
+
+      if (context) {
+        // Capture screenshot if this is a visual question (simple heuristic)
+        const isVisualQuestion = prompt.toLowerCase().match(/look|see|image|screenshot|visual|picture|screen/);
+        
+        if (isVisualQuestion) {
+          try {
+            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            imageData = dataUrl; // API client expects data URL for OpenAI
+          } catch (e) {
+            console.warn('Screenshot capture failed during message handling', e);
+          }
+        }
+
+        // Format the text prompt with context
+        const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
+        finalPrompt = formatted;
+      }
+      
       // Call API
-      const response = await this.apiClient.callOpenAIAPI(prompt, imageData);
+      const response = await this.apiClient.callOpenAIAPI(finalPrompt, imageData);
       
       // Save assistant response
       conversation.push({ role: 'assistant', content: response });
@@ -83,16 +124,12 @@ export class MessageHandler {
   }
 
   async handleCaptureScreenshot(tabId, sendResponse) {
-    // If tabId is not provided or we are not in a context where we can capture
-    // (e.g. from side panel without active tab permission on that specific tab)
-    // we might need to be careful.
-    
     try {
       // Capture visible tab of the current window
       // Note: captureVisibleTab defaults to current window if windowId not specified
       const dataUrl = await chrome.tabs.captureVisibleTab(null, {
         format: 'png',
-        quality: 100
+        quality: 80
       });
       sendResponse({ screenshot: dataUrl });
     } catch (error) {
@@ -124,9 +161,7 @@ export class MessageHandler {
   async handlePageContextUpdated(context, tabId, sendResponse) {
     if (tabId) {
       // Update state with rich context from content script
-      // We might want to store more than just URL
       await this.stateManager.updateTabState(tabId, context.url);
-      // Could also store full context if needed
     }
     sendResponse({ received: true });
   }
