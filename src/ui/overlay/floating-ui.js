@@ -666,8 +666,12 @@ class FloatingUI {
   createMainWindow() {
     this.mainWindow = document.createElement('div');
     this.mainWindow.className = 'main-window';
-    // Ensure main window is above backdrop
-    this.mainWindow.style.zIndex = '2147483648';
+    
+    // Load saved size
+    this.loadWindowSize();
+    
+    // Make resizable
+    this.setupResize();
     
     // Header
     const header = document.createElement('div');
