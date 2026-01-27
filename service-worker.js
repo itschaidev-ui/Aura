@@ -18,20 +18,22 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Action button click - try floating UI first, fallback to side panel
+// Action button click - open floating UI or side panel
 chrome.action.onClicked.addListener((tab) => {
-  // Try to open floating UI (preferred method)
-  chrome.tabs.sendMessage(tab.id, { type: 'OPEN_AURA' }).catch(() => {
-    // If content script isn't ready, open side panel as fallback
-    // This is OK because action.onClicked IS a user gesture
-    // Call it synchronously to preserve user gesture context
-    if (chrome.sidePanel && chrome.sidePanel.open) {
-      try {
-        chrome.sidePanel.open({ windowId: tab.windowId });
-      } catch (error) {
-        console.warn('Failed to open side panel:', error);
-      }
+  // Open side panel directly (this is a user gesture, so it's allowed)
+  // This provides a fallback if content script isn't ready
+  if (chrome.sidePanel && chrome.sidePanel.open) {
+    try {
+      chrome.sidePanel.open({ windowId: tab.windowId });
+    } catch (error) {
+      console.warn('Failed to open side panel:', error);
     }
+  }
+  
+  // Also try to open floating UI (doesn't require user gesture)
+  chrome.tabs.sendMessage(tab.id, { type: 'OPEN_AURA' }).catch(() => {
+    // Content script might not be ready - that's OK, side panel is already open
+    console.log('Floating UI not available, using side panel');
   });
 });
 
