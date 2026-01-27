@@ -1012,7 +1012,30 @@ class FloatingUI {
     this.backdrop = document.createElement('div');
     this.backdrop.className = 'overlay-backdrop';
     this.backdrop.style.zIndex = '2147483646';
-    this.backdrop.addEventListener('click', () => this.closeMainWindow());
+    
+    // Prevent backdrop from closing window immediately - add small delay
+    let backdropClickTimeout = null;
+    this.backdrop.addEventListener('click', (e) => {
+      // Only close if clicking directly on backdrop (not on window)
+      if (e.target === this.backdrop) {
+        // Add small delay to prevent immediate closing
+        if (backdropClickTimeout) {
+          clearTimeout(backdropClickTimeout);
+        }
+        backdropClickTimeout = setTimeout(() => {
+          this.closeMainWindow();
+        }, 100);
+      }
+    });
+    
+    // Prevent clicks inside window from closing it
+    this.mainWindow.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (backdropClickTimeout) {
+        clearTimeout(backdropClickTimeout);
+      }
+    });
+    
     this.shadowRoot.appendChild(this.backdrop);
     
     // Main window (added after backdrop, higher z-index - appears on top)
@@ -1259,6 +1282,8 @@ class FloatingUI {
   }
 
   closeMainWindow() {
+    if (!this.isWindowOpen) return; // Already closed
+    
     this.isWindowOpen = false;
     if (this.mainWindow) {
       this.mainWindow.classList.remove('visible');
@@ -1268,13 +1293,12 @@ class FloatingUI {
     if (this.backdrop) {
       this.backdrop.classList.remove('visible');
     }
+    
+    // Don't remove from DOM immediately - keep for reuse
+    // Only remove after animation completes
     setTimeout(() => {
-      if (this.mainWindow && this.mainWindow.parentNode) {
-        this.mainWindow.parentNode.removeChild(this.mainWindow);
-      }
-      if (this.backdrop && this.backdrop.parentNode) {
-        this.backdrop.parentNode.removeChild(this.backdrop);
-      }
+      // Keep elements in DOM but hidden for faster reopening
+      // Only remove if user explicitly wants to close
     }, 300);
   }
   
