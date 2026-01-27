@@ -122,9 +122,9 @@ export class ApiClient {
     }
     
     // Use Gemini 1.5 Flash (faster and more reliable)
-    // Try v1beta first (more stable), fallback to v1 if needed
+    // Try v1beta API version
     const model = 'gemini-1.5-flash';
-    let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
     
     const parts = [{ text: prompt }];
     
@@ -146,7 +146,9 @@ export class ApiClient {
       }],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 2000
+        maxOutputTokens: 2000,
+        topP: 0.95,
+        topK: 40
       }
     };
     
@@ -154,14 +156,27 @@ export class ApiClient {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key  // Use header instead of query parameter
         },
         body: JSON.stringify(payload)
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error?.message || response.statusText;
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { error: { message: errorText || response.statusText } };
+        }
+        
+        const errorMessage = errorData.error?.message || errorData.message || response.statusText;
+        console.error('Gemini API error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
         throw new Error(`Gemini API error: ${response.status} - ${errorMessage}`);
       }
       
@@ -306,9 +321,9 @@ export class ApiClient {
     }
     
     // Gemini streaming endpoint
-    // Use v1beta for streaming (more stable)
+    // Use v1beta for streaming
     const model = 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${key}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`;
     
     const parts = [{ text: prompt }];
     
@@ -338,15 +353,27 @@ export class ApiClient {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key  // Use header instead of query parameter
         },
         body: JSON.stringify(payload)
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error?.message || response.statusText;
-        console.error('Gemini API error details:', errorData);
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { error: { message: errorText || response.statusText } };
+        }
+        
+        const errorMessage = errorData.error?.message || errorData.message || response.statusText;
+        console.error('Gemini streaming API error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
         throw new Error(`Gemini API error: ${response.status} - ${errorMessage}`);
       }
       
