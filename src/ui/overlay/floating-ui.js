@@ -163,6 +163,7 @@ class FloatingUI {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         backdrop-filter: blur(20px);
         overflow: hidden;
+        z-index: 2147483648;
       }
 
       .main-window.visible {
@@ -393,6 +394,7 @@ class FloatingUI {
         pointer-events: auto;
         opacity: 0;
         transition: opacity 0.3s ease;
+        z-index: 2147483646;
       }
 
       .overlay-backdrop.visible {
@@ -641,6 +643,8 @@ class FloatingUI {
   createMainWindow() {
     this.mainWindow = document.createElement('div');
     this.mainWindow.className = 'main-window';
+    // Ensure main window is above backdrop
+    this.mainWindow.style.zIndex = '2147483648';
     
     // Header
     const header = document.createElement('div');
@@ -747,13 +751,16 @@ class FloatingUI {
     this.mainWindow.appendChild(content);
     this.mainWindow.appendChild(inputArea);
     
-    this.shadowRoot.appendChild(this.mainWindow);
-    
-    // Backdrop
+    // Backdrop (added first, lower z-index)
     this.backdrop = document.createElement('div');
     this.backdrop.className = 'overlay-backdrop';
+    this.backdrop.style.zIndex = '2147483646';
     this.backdrop.addEventListener('click', () => this.closeMainWindow());
     this.shadowRoot.appendChild(this.backdrop);
+    
+    // Main window (added after backdrop, higher z-index - appears on top)
+    this.mainWindow.style.zIndex = '2147483648';
+    this.shadowRoot.appendChild(this.mainWindow);
   }
 
   toggleCommandBar() {
