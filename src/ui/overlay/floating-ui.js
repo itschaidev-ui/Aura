@@ -432,6 +432,33 @@ class FloatingUI {
         font-style: italic;
         opacity: 0.9;
       }
+      
+      .message-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .action-btn {
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        color: #e5e7eb;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      }
+      
+      .action-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+      }
 
       .input-area {
         padding: 16px 20px 20px 20px;
@@ -1497,6 +1524,9 @@ class FloatingUI {
         
         // Detect and display tasks
         this.detectAndDisplayTasks(fullText);
+        
+        // Add action buttons for integrations
+        this.addActionButtons(assistantMsg, fullText);
       }
     };
     
@@ -1536,6 +1566,7 @@ class FloatingUI {
           fallbackMsg.innerHTML = this.formatMessage(fallbackResponse.response);
           messagesContainer.appendChild(fallbackMsg);
           this.detectAndDisplayTasks(fallbackResponse.response);
+          this.addActionButtons(fallbackMsg, fallbackResponse.response);
         }
       }
     } catch (error) {
@@ -1662,15 +1693,35 @@ class FloatingUI {
   }
   
   formatMessage(text) {
-    // Basic formatting: code blocks, inline code, bold, links
+    if (!text) return '';
+    
+    // Escape HTML first
     let formatted = text
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color: #6366f1;">$1</a>');
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    
+    // Code blocks (before inline code)
+    formatted = formatted.replace(/```(\w+)?\n?([\s\S]*?)```/g, '<pre><code class="code-block">$2</code></pre>');
+    
+    // Inline code
+    formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    
+    // Bold
+    formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Italic
+    formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    
+    // Links
+    formatted = formatted.replace(/(https?:\/\/[^\s\)]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>');
     
     // Line breaks
     formatted = formatted.replace(/\n/g, '<br>');
+    
+    // Lists
+    formatted = formatted.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
+    formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
     
     return formatted;
   }
