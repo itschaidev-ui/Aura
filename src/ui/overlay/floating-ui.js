@@ -737,7 +737,11 @@ class FloatingUI {
         this.updateContextDisplay();
       }
     } catch (e) {
-      console.log('Failed to get context', e);
+      // Extension context invalidated - extension was reloaded
+      // This is expected during development and can be safely ignored
+      if (e.message && !e.message.includes('Extension context invalidated')) {
+        console.log('Failed to get context', e);
+      }
     }
     
     if (initialQuery) {
@@ -799,8 +803,12 @@ class FloatingUI {
       
       typingMsg.remove();
       
-      if (response.error) {
+      if (response && response.error) {
         throw new Error(response.error);
+      }
+      
+      if (!response) {
+        throw new Error('No response from extension. Please reload the extension.');
       }
       
       const assistantMsg = document.createElement('div');
@@ -813,7 +821,14 @@ class FloatingUI {
       const errorMsg = document.createElement('div');
       errorMsg.className = 'message assistant';
       errorMsg.style.color = '#ef4444';
-      errorMsg.textContent = `Error: ${error.message}`;
+      
+      // Handle extension context invalidated gracefully
+      if (error.message && error.message.includes('Extension context invalidated')) {
+        errorMsg.textContent = 'Extension was reloaded. Please refresh this page to continue using Aura.';
+      } else {
+        errorMsg.textContent = `Error: ${error.message || 'Unknown error'}`;
+      }
+      
       messagesContainer.appendChild(errorMsg);
     }
   }

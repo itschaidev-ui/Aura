@@ -45,15 +45,30 @@ class ContentScript {
     this.pageContext = context;
     
     // Send to service worker
-    chrome.runtime.sendMessage({
-      type: 'PAGE_CONTEXT_UPDATED',
-      data: {
-        url: context.url,
-        title: context.title
+    try {
+      chrome.runtime.sendMessage({
+        type: 'PAGE_CONTEXT_UPDATED',
+        data: {
+          url: context.url,
+          title: context.title
+        }
+      }).catch(err => {
+        // Extension context invalidated (extension was reloaded)
+        // This is normal and can be safely ignored
+        if (err.message && err.message.includes('Extension context invalidated')) {
+          // Extension was reloaded - content script will be re-injected
+          return;
+        }
+        // Ignore other errors silently
+      });
+    } catch (error) {
+      // Extension context invalidated - extension was reloaded
+      // This is expected when developer reloads the extension
+      // The content script will be re-injected automatically
+      if (error.message && !error.message.includes('Extension context invalidated')) {
+        console.log('Content script error:', error);
       }
-    }).catch(err => {
-      // Ignore errors if background script is not ready (e.g. updated extension)
-    });
+    }
   }
 
   extractText() {
@@ -103,23 +118,32 @@ class ContentScript {
   }
 
   async handleMessage(message, sendResponse) {
-    switch (message.type) {
-      case 'GET_CONTEXT':
-        if (!this.pageContext) {
-          this.extractContext();
-        }
-        sendResponse({ context: this.pageContext });
-        break;
-      
-      case 'EXTRACT_SELECTED_TEXT':
-        const selected = window.getSelection().toString();
-        sendResponse({ text: selected });
-        break;
-      
-      default:
-        // Don't send error for unknown messages, just ignore
-        // This prevents interference with other listeners
-        break;
+    try {
+      switch (message.type) {
+        case 'GET_CONTEXT':
+          if (!this.pageContext) {
+            this.extractContext();
+          }
+          sendResponse({ context: this.pageContext });
+          break;
+        
+        case 'EXTRACT_SELECTED_TEXT':
+          const selected = window.getSelection().toString();
+          sendResponse({ text: selected });
+          break;
+        
+        default:
+          // Don't send error for unknown messages, just ignore
+          // This prevents interference with other listeners
+          break;
+      }
+    } catch (error) {
+      // Handle extension context invalidated errors gracefully
+      if (error.message && error.message.includes('Extension context invalidated')) {
+        // Extension was reloaded - this is expected during development
+        return;
+      }
+      console.error('Content script message handler error:', error);
     }
   }
 }
