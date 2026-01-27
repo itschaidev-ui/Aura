@@ -25,6 +25,8 @@
     "default_path": "src/ui/sidepanel/sidepanel.html"
   },
   
+  "options_page": "src/ui/settings/settings.html",
+  
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -54,7 +56,7 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["src/ui/overlay/*"],
+      "resources": ["src/ui/overlay/*", "slack-oauth.html"],
       "matches": ["<all_urls>"]
     }
   ]

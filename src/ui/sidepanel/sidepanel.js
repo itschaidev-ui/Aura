@@ -46,6 +46,12 @@ class SidePanel {
     const sendBtn = document.getElementById('send-btn');
     const input = document.getElementById('message-input');
     const quickActions = document.querySelectorAll('.quick-action-btn');
+    const settingsBtn = document.getElementById('settings-btn');
+
+    // Settings button
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => this.openSettings());
+    }
 
     // Send button
     sendBtn.addEventListener('click', () => this.sendMessage());
@@ -378,6 +384,13 @@ class SidePanel {
       // Background script notified us of context update
       // We could fetch new context here, but we'll wait for next interaction
     }
+  }
+  
+  openSettings() {
+    // Open settings in a new tab or side panel
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('src/ui/settings/settings.html')
+    });
   }
 }
 

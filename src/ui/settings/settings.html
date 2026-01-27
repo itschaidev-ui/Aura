@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="settings-container">
+    <header class="settings-header">
+      <h1>⚙️ Aura Settings</h1>
+      <p>Configure your AI assistant and integrations</p>
+    </header>
+
+    <div class="settings-content">
+      <!-- AI Provider Section -->
+      <section class="settings-section">
+        <h2>AI Provider</h2>
+        <div class="setting-item">
+          <label for="ai-provider">Primary AI Provider</label>
+          <select id="ai-provider" class="setting-input">
+            <option value="gemini">Gemini (Google) - Configured</option>
+            <option value="openai">OpenAI (ChatGPT)</option>
+          </select>
+          <p class="setting-hint">Gemini API key is pre-configured and locked for security.</p>
+        </div>
+      </section>
+
+      <!-- OpenAI API Key (Optional) -->
+      <section class="settings-section">
+        <h2>OpenAI API Key (Optional)</h2>
+        <div class="setting-item">
+          <label for="openai-key">OpenAI API Key</label>
+          <input 
+            type="password" 
+            id="openai-key" 
+            class="setting-input" 
+            placeholder="sk-..."
+          >
+          <p class="setting-hint">Only needed if you want to use ChatGPT instead of Gemini.</p>
+          <button id="save-openai" class="btn-primary">Save OpenAI Key</button>
+        </div>
+      </section>
+
+      <!-- Integrations Section -->
+      <section class="settings-section">
+        <h2>Integrations</h2>
+        
+        <!-- Slack -->
+        <div class="integration-item">
+          <div class="integration-header">
+            <div class="integration-info">
+              <h3>Slack</h3>
+              <p>Send messages and create tasks in Slack</p>
+            </div>
+            <div class="integration-status" id="slack-status">
+              <span class="status-badge disconnected">Not Connected</span>
+            </div>
+          </div>
+          <div class="integration-actions">
+            <button id="connect-slack" class="btn-secondary">Connect Slack</button>
+            <button id="disconnect-slack" class="btn-danger" style="display: none;">Disconnect</button>
+          </div>
+          <div id="slack-config" class="integration-config" style="display: none;">
+            <label>Slack Bot Token (xoxb-...)</label>
+            <input type="password" id="slack-token" class="setting-input" placeholder="xoxb-...">
+            <button id="save-slack-token" class="btn-primary">Save Token</button>
+          </div>
+        </div>
+
+        <!-- GitHub -->
+        <div class="integration-item">
+          <div class="integration-header">
+            <div class="integration-info">
+              <h3>GitHub</h3>
+              <p>Create issues and manage repositories</p>
+            </div>
+            <div class="integration-status" id="github-status">
+              <span class="status-badge disconnected">Not Connected</span>
+            </div>
+          </div>
+          <div class="integration-actions">
+            <label>GitHub Personal Access Token</label>
+            <input type="password" id="github-token" class="setting-input" placeholder="ghp_...">
+            <button id="save-github" class="btn-primary">Save GitHub Token</button>
+          </div>
+        </div>
+
+        <!-- Notion -->
+        <div class="integration-item">
+          <div class="integration-header">
+            <div class="integration-info">
+              <h3>Notion</h3>
+              <p>Create pages and save content</p>
+            </div>
+            <div class="integration-status" id="notion-status">
+              <span class="status-badge disconnected">Not Connected</span>
+            </div>
+          </div>
+          <div class="integration-actions">
+            <label>Notion API Key</label>
+            <input type="password" id="notion-key" class="setting-input" placeholder="secret_...">
+            <button id="save-notion" class="btn-primary">Save Notion Key</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Status Messages -->
+      <div id="status-message" class="status-message" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>

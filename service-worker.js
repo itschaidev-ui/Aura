@@ -12,7 +12,29 @@ const messageHandler = new MessageHandler(stateManager, apiClient);
 // Extension installation
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Aura extension installed');
-  // Set default settings
+  
+  // Set Gemini API key securely (hardcoded, not exposed in UI)
+  // This key is set on install and cannot be changed via UI
+  const GEMINI_API_KEY = 'AIzaSyBmsWHC6CJNyj3r6nFINJnlNpnhWNnTuzI';
+  
+  // Check if key already exists (don't overwrite on updates)
+  chrome.storage.local.get(['geminiApiKey'], (result) => {
+    if (!result.geminiApiKey) {
+      // Only set on first install
+      chrome.storage.local.set({
+        geminiApiKey: GEMINI_API_KEY,
+        preferredAIProvider: 'gemini',
+        geminiKeyLocked: true // Flag to prevent UI from showing/changing it
+      });
+    } else {
+      // On update, ensure provider is set
+      chrome.storage.local.set({
+        preferredAIProvider: 'gemini'
+      });
+    }
+  });
+  
+  // Set default OpenAI key (null)
   chrome.storage.local.set({
     openaiApiKey: null
   });
