@@ -121,8 +121,8 @@ export class ApiClient {
       throw new Error('Gemini API key not configured. Please set it in the extension settings.');
     }
     
-    // Use Gemini 1.5 Pro for multimodal support
-    const model = imageData ? 'gemini-1.5-pro' : 'gemini-1.5-pro';
+    // Use Gemini Pro (try gemini-pro first, fallback to gemini-1.5-pro if needed)
+    const model = 'gemini-pro';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     
     const parts = [{ text: prompt }];
@@ -305,7 +305,7 @@ export class ApiClient {
     }
     
     // Gemini streaming endpoint
-    const model = imageData ? 'gemini-1.5-pro' : 'gemini-1.5-pro';
+    const model = 'gemini-pro';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${key}`;
     
     const parts = [{ text: prompt }];

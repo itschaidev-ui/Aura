@@ -213,7 +213,12 @@ class FloatingUI {
 
       .window-actions {
         display: flex;
-        gap: 8px;
+        gap: 12px;
+        align-items: center;
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
       }
 
       .window-btn {
@@ -222,17 +227,23 @@ class FloatingUI {
         border-radius: 6px;
         background: transparent;
         border: none;
-        color: #9ca3af;
+        color: #e5e7eb;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.2s ease;
+        padding: 0;
       }
 
       .window-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.08);
         color: #ffffff;
+      }
+      
+      .window-btn svg {
+        width: 18px;
+        height: 18px;
       }
 
       .window-content {
@@ -330,24 +341,91 @@ class FloatingUI {
       }
 
       .input-area {
-        padding: 16px 20px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(0, 0, 0, 0.2);
+        padding: 16px 20px 20px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        background: transparent;
+      }
+      
+      .context-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        font-size: 12px;
+        color: #9ca3af;
+        margin-bottom: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      }
+      
+      .context-tag-icon {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .model-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        font-size: 12px;
+        color: #e5e7eb;
+        margin-bottom: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
       }
 
       .input-wrapper {
         display: flex;
         gap: 8px;
-        align-items: flex-end;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 12px 16px;
+        align-items: center;
+        background: #1a1a1a;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 14px 16px;
+        position: relative;
       }
 
       .input-wrapper:focus-within {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        border-color: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+      }
+      
+      .input-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      
+      .input-icon-btn {
+        width: 24px;
+        height: 24px;
+        border: none;
+        background: transparent;
+        color: #9ca3af;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+      }
+      
+      .input-icon-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #e5e7eb;
+      }
+      
+      .input-icon-btn svg {
+        width: 16px;
+        height: 16px;
       }
 
       .input-field {
@@ -361,34 +439,42 @@ class FloatingUI {
         resize: none;
         max-height: 120px;
         overflow-y: auto;
+        line-height: 1.5;
       }
 
       .input-field::placeholder {
-        color: #6b7280;
+        color: #9ca3af;
       }
 
       .send-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        background: #6366f1;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: transparent;
         border: none;
-        color: white;
+        color: #9ca3af;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.2s ease;
         flex-shrink: 0;
+        padding: 0;
       }
 
       .send-btn:hover:not(:disabled) {
-        background: #4f46e5;
+        background: rgba(255, 255, 255, 0.08);
+        color: #e5e7eb;
       }
 
       .send-btn:disabled {
-        opacity: 0.5;
+        opacity: 0.4;
         cursor: not-allowed;
+      }
+      
+      .send-btn svg {
+        width: 16px;
+        height: 16px;
       }
 
       .overlay-backdrop {
@@ -733,35 +819,58 @@ class FloatingUI {
     const header = document.createElement('div');
     header.className = 'window-header';
     
+    // macOS Traffic Light Buttons
+    const trafficLights = document.createElement('div');
+    trafficLights.className = 'traffic-lights';
+    const closeLight = document.createElement('div');
+    closeLight.className = 'traffic-light close';
+    closeLight.title = 'Close';
+    closeLight.addEventListener('click', () => this.closeMainWindow());
+    const minimizeLight = document.createElement('div');
+    minimizeLight.className = 'traffic-light minimize';
+    minimizeLight.title = 'Minimize';
+    const maximizeLight = document.createElement('div');
+    maximizeLight.className = 'traffic-light maximize';
+    maximizeLight.title = 'Maximize';
+    trafficLights.appendChild(closeLight);
+    trafficLights.appendChild(minimizeLight);
+    trafficLights.appendChild(maximizeLight);
+    
     const title = document.createElement('div');
     title.className = 'window-title';
-    title.innerHTML = `
-      <div class="window-title-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
-          <path d="M2 17L12 22L22 17"/>
-          <path d="M2 12L12 17L22 12"/>
-        </svg>
-      </div>
-      <span>Aura | The AI Assistant</span>
-    `;
+    title.textContent = 'Aura | The AI Assistant';
     
     const actions = document.createElement('div');
     actions.className = 'window-actions';
     
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'window-btn';
+    menuBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    `;
+    menuBtn.title = 'Menu';
+    
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'window-btn';
-    settingsBtn.innerHTML = '⚙';
+    settingsBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+      </svg>
+    `;
     settingsBtn.title = 'Settings';
+    settingsBtn.addEventListener('click', () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('src/ui/settings/settings.html') });
+    });
     
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'window-btn';
-    closeBtn.innerHTML = '✕';
-    closeBtn.title = 'Close';
-    closeBtn.addEventListener('click', () => this.closeMainWindow());
-    
+    actions.appendChild(menuBtn);
     actions.appendChild(settingsBtn);
-    actions.appendChild(closeBtn);
+    
+    header.appendChild(trafficLights);
     header.appendChild(title);
     header.appendChild(actions);
     
@@ -796,38 +905,98 @@ class FloatingUI {
     const inputArea = document.createElement('div');
     inputArea.className = 'input-area';
     
+    // Context tag (like Highlight AI)
+    const contextTag = document.createElement('div');
+    contextTag.className = 'context-tag';
+    contextTag.id = 'context-tag';
+    contextTag.innerHTML = `
+      <div class="context-tag-icon" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <span id="context-tag-text">Reading page...</span>
+    `;
+    
+    // Model tag
+    const modelTag = document.createElement('div');
+    modelTag.className = 'model-tag';
+    modelTag.textContent = 'Aura - Gemini';
+    
     const inputWrapper = document.createElement('div');
     inputWrapper.className = 'input-wrapper';
     
     const input = document.createElement('textarea');
     input.className = 'input-field';
-    input.placeholder = 'Ask Aura anything about this page...';
+    input.placeholder = 'Ask Aura anything...';
     input.rows = 1;
+    
+    const inputActions = document.createElement('div');
+    inputActions.className = 'input-actions';
+    
+    const micBtn = document.createElement('button');
+    micBtn.className = 'input-icon-btn';
+    micBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+    `;
+    micBtn.title = 'Voice input';
+    
+    const mentionBtn = document.createElement('button');
+    mentionBtn.className = 'input-icon-btn';
+    mentionBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="8.5" cy="7" r="4"/>
+        <line x1="20" y1="8" x2="20" y2="14"/>
+        <line x1="23" y1="11" x2="17" y2="11"/>
+      </svg>
+    `;
+    mentionBtn.title = 'Mention';
     
     const sendBtn = document.createElement('button');
     sendBtn.className = 'send-btn';
     sendBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="22" y1="2" x2="11" y2="13"/>
         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
       </svg>
     `;
+    sendBtn.title = 'Send';
     
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         this.sendMessage(input.value);
         input.value = '';
+        input.style.height = 'auto';
       }
+    });
+    
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     });
     
     sendBtn.addEventListener('click', () => {
       this.sendMessage(input.value);
       input.value = '';
+      input.style.height = 'auto';
     });
     
+    inputActions.appendChild(micBtn);
+    inputActions.appendChild(mentionBtn);
+    inputActions.appendChild(sendBtn);
+    
     inputWrapper.appendChild(input);
-    inputWrapper.appendChild(sendBtn);
+    inputWrapper.appendChild(inputActions);
+    
+    inputArea.appendChild(contextTag);
+    inputArea.appendChild(modelTag);
     inputArea.appendChild(inputWrapper);
     
     this.mainWindow.appendChild(header);
