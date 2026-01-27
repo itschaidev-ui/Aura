@@ -1,10 +1,13 @@
 // src/background/message-handler.js
 import { ContextProcessor } from '../content/context-processor.js';
+import { TaskDetector } from './task-detector.js';
+import { IntegrationManager } from '../integrations/integration-manager.js';
 
 export class MessageHandler {
   constructor(stateManager, apiClient) {
     this.stateManager = stateManager;
     this.apiClient = apiClient;
+    this.integrationManager = new IntegrationManager();
   }
 
   async handle(message, sender, sendResponse) {
@@ -21,6 +24,10 @@ export class MessageHandler {
           this.handleSendMessage(message.data, tabId, sendResponse);
           break;
         
+        case 'STREAM_MESSAGE':
+          this.handleStreamMessage(message.data, tabId, sendResponse);
+          break;
+        
         case 'CAPTURE_SCREENSHOT':
           this.handleCaptureScreenshot(tabId, sendResponse);
           break;
@@ -35,6 +42,18 @@ export class MessageHandler {
           
         case 'PAGE_CONTEXT_UPDATED':
           this.handlePageContextUpdated(message.data, tabId, sendResponse);
+          break;
+        
+        case 'DETECT_TASKS':
+          this.handleDetectTasks(message.text, sendResponse);
+          break;
+        
+        case 'EXECUTE_ACTION':
+          this.handleExecuteAction(message.data, sendResponse);
+          break;
+        
+        case 'GET_INTEGRATIONS':
+          this.handleGetIntegrations(sendResponse);
           break;
         
         default:
@@ -123,6 +142,77 @@ export class MessageHandler {
     }
   }
 
+  async handleStreamMessage(data, tabId, sendResponse) {
+    if (!tabId) {
+      sendResponse({ error: 'No tab ID provided' });
+      return;
+    }
+
+    const { prompt, context } = data;
+    
+    try {
+      // Save user message immediately
+      const conversation = await this.stateManager.getConversation(tabId);
+      conversation.push({ role: 'user', content: prompt });
+      await this.stateManager.saveConversation(tabId, conversation);
+      
+      // Format prompt with context if available
+      let finalPrompt = prompt;
+      let imageData = null;
+
+      if (context) {
+        const isVisualQuestion = prompt.toLowerCase().match(/look|see|image|screenshot|visual|picture|screen/);
+        
+        if (isVisualQuestion) {
+          try {
+            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            imageData = dataUrl;
+          } catch (e) {
+            console.warn('Screenshot capture failed', e);
+          }
+        }
+
+        if (context) {
+          const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
+          finalPrompt = formatted;
+        }
+      }
+      
+      // Stream response
+      let fullResponse = '';
+      await this.apiClient.streamResponse(
+        finalPrompt,
+        imageData,
+        (chunk) => {
+          // Send each chunk to UI
+          fullResponse += chunk;
+          chrome.runtime.sendMessage({
+            type: 'STREAM_CHUNK',
+            tabId: tabId,
+            chunk: chunk,
+            fullText: fullResponse
+          }).catch(() => {}); // Ignore errors if no listeners
+        },
+        (complete) => {
+          // Save complete response
+          conversation.push({ role: 'assistant', content: complete });
+          this.stateManager.saveConversation(tabId, conversation);
+          
+          // Send completion message
+          chrome.runtime.sendMessage({
+            type: 'STREAM_COMPLETE',
+            tabId: tabId,
+            response: complete
+          }).catch(() => {});
+        }
+      );
+      
+      sendResponse({ streaming: true });
+    } catch (error) {
+      sendResponse({ error: error.message });
+    }
+  }
+
   async handleCaptureScreenshot(tabId, sendResponse) {
     try {
       // Capture visible tab of the current window
@@ -164,5 +254,32 @@ export class MessageHandler {
       await this.stateManager.updateTabState(tabId, context.url);
     }
     sendResponse({ received: true });
+  }
+  
+  async handleDetectTasks(text, sendResponse) {
+    try {
+      const tasks = TaskDetector.extractTasks(text);
+      sendResponse({ tasks });
+    } catch (error) {
+      sendResponse({ tasks: [], error: error.message });
+    }
+  }
+  
+  async handleExecuteAction(data, sendResponse) {
+    try {
+      const result = await this.integrationManager.executeAction(data.action, data.params);
+      sendResponse({ success: true, result });
+    } catch (error) {
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+  
+  async handleGetIntegrations(sendResponse) {
+    try {
+      const connected = await this.integrationManager.getConnectedIntegrations();
+      sendResponse({ integrations: connected });
+    } catch (error) {
+      sendResponse({ integrations: [], error: error.message });
+    }
   }
 }

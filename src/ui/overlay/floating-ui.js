@@ -468,6 +468,68 @@ class FloatingUI {
         height: 28px;
         fill: #6366f1;
       }
+
+      .tasks-section {
+        margin-bottom: 24px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+      }
+
+      .tasks-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .task-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px;
+        border-radius: 6px;
+        transition: background 0.2s ease;
+      }
+
+      .task-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .task-item.completed .task-text {
+        text-decoration: line-through;
+        opacity: 0.6;
+      }
+
+      .task-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .task-text {
+        flex: 1;
+        font-size: 14px;
+        color: #e5e7eb;
+      }
+
+      .streaming-text {
+        display: inline;
+      }
+
+      .streaming-cursor {
+        display: inline-block;
+        width: 2px;
+        height: 1em;
+        background: #6366f1;
+        animation: blink 1s infinite;
+        margin-left: 2px;
+      }
+
+      @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+      }
     `;
     this.shadowRoot.appendChild(style);
   }
@@ -1040,49 +1102,80 @@ class FloatingUI {
     messagesContainer.appendChild(userMsg);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
-    // Add typing indicator
-    const typingMsg = document.createElement('div');
-    typingMsg.className = 'message assistant';
-    typingMsg.textContent = '...';
-    typingMsg.id = 'typing-indicator';
-    messagesContainer.appendChild(typingMsg);
+    // Add streaming message container
+    const assistantMsg = document.createElement('div');
+    assistantMsg.className = 'message assistant';
+    assistantMsg.id = 'streaming-message';
+    assistantMsg.innerHTML = '<span class="streaming-text"></span>';
+    messagesContainer.appendChild(assistantMsg);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    const streamingText = assistantMsg.querySelector('.streaming-text');
+    let fullText = '';
+    
+    // Listen for streaming chunks
+    const streamListener = (message) => {
+      if (message.type === 'STREAM_CHUNK' && message.fullText) {
+        fullText = message.fullText;
+        streamingText.innerHTML = this.formatMessage(fullText);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      } else if (message.type === 'STREAM_COMPLETE') {
+        fullText = message.response;
+        streamingText.innerHTML = this.formatMessage(fullText);
+        assistantMsg.id = ''; // Remove streaming ID
+        chrome.runtime.onMessage.removeListener(streamListener);
+        
+        // Detect and display tasks
+        this.detectAndDisplayTasks(fullText);
+      }
+    };
+    
+    chrome.runtime.onMessage.addListener(streamListener);
     
     try {
-      // Get context if we don't have it
-      if (!this.currentContext) {
-        // We'll rely on the background script to fetch it via message handler
-      }
-      
+      // Use streaming API
       const response = await chrome.runtime.sendMessage({
-        type: 'SEND_MESSAGE',
+        type: 'STREAM_MESSAGE',
         data: {
           prompt: text,
-          context: this.currentContext // Pass current context if available
+          context: this.currentContext
         }
       });
-      
-      typingMsg.remove();
       
       if (response && response.error) {
         throw new Error(response.error);
       }
       
-      if (!response) {
-        throw new Error('No response from extension. Please reload the extension.');
+      // If streaming fails, fall back to regular message
+      if (!response || !response.streaming) {
+        chrome.runtime.onMessage.removeListener(streamListener);
+        assistantMsg.remove();
+        
+        // Fallback to non-streaming
+        const fallbackResponse = await chrome.runtime.sendMessage({
+          type: 'SEND_MESSAGE',
+          data: {
+            prompt: text,
+            context: this.currentContext
+          }
+        });
+        
+        if (fallbackResponse && fallbackResponse.response) {
+          const fallbackMsg = document.createElement('div');
+          fallbackMsg.className = 'message assistant';
+          fallbackMsg.innerHTML = this.formatMessage(fallbackResponse.response);
+          messagesContainer.appendChild(fallbackMsg);
+          this.detectAndDisplayTasks(fallbackResponse.response);
+        }
       }
-      
-      const assistantMsg = document.createElement('div');
-      assistantMsg.className = 'message assistant';
-      assistantMsg.innerHTML = this.formatMessage(response.response);
-      messagesContainer.appendChild(assistantMsg);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } catch (error) {
-      typingMsg.remove();
+      chrome.runtime.onMessage.removeListener(streamListener);
+      assistantMsg.remove();
+      
       const errorMsg = document.createElement('div');
       errorMsg.className = 'message assistant';
       errorMsg.style.color = '#ef4444';
       
-      // Handle extension context invalidated gracefully
       if (error.message && error.message.includes('Extension context invalidated')) {
         errorMsg.textContent = 'Extension was reloaded. Please refresh this page to continue using Aura.';
       } else {
@@ -1091,6 +1184,55 @@ class FloatingUI {
       
       messagesContainer.appendChild(errorMsg);
     }
+  }
+  
+  async detectAndDisplayTasks(text) {
+    try {
+      // Request task detection from background script
+      const response = await chrome.runtime.sendMessage({
+        type: 'DETECT_TASKS',
+        text: text
+      });
+      
+      if (response && response.tasks && response.tasks.length > 0) {
+        this.displayTasks(response.tasks);
+      }
+    } catch (e) {
+      // Task detection failed, continue without it
+      console.log('Task detection failed', e);
+    }
+  }
+  
+  displayTasks(tasks) {
+    // Add tasks section if it doesn't exist
+    let tasksSection = this.mainWindow.querySelector('.tasks-section');
+    if (!tasksSection) {
+      tasksSection = document.createElement('div');
+      tasksSection.className = 'tasks-section';
+      tasksSection.innerHTML = '<div class="section-title">Tasks</div><div class="tasks-list"></div>';
+      const content = this.mainWindow.querySelector('.window-content');
+      content.insertBefore(tasksSection, content.firstChild);
+    }
+    
+    const tasksList = tasksSection.querySelector('.tasks-list');
+    tasks.forEach(task => {
+      const taskItem = document.createElement('div');
+      taskItem.className = 'task-item';
+      taskItem.innerHTML = `
+        <input type="checkbox" class="task-checkbox">
+        <span class="task-text">${task.text}</span>
+      `;
+      
+      taskItem.querySelector('.task-checkbox').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          taskItem.classList.add('completed');
+        } else {
+          taskItem.classList.remove('completed');
+        }
+      });
+      
+      tasksList.appendChild(taskItem);
+    });
   }
   
   formatMessage(text) {

@@ -146,18 +146,42 @@ class SidePanel {
     input.value = '';
     input.style.height = 'auto';
 
-    // Show typing indicator
-    const typingId = this.showTypingIndicator();
+    // Add streaming message container
+    const assistantMsgId = `msg-${Date.now()}`;
+    const assistantMsg = document.createElement('div');
+    assistantMsg.className = 'message assistant';
+    assistantMsg.id = assistantMsgId;
+    assistantMsg.innerHTML = '<span class="streaming-text"></span>';
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.appendChild(assistantMsg);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    const streamingText = assistantMsg.querySelector('.streaming-text');
+    let fullText = '';
+    
+    // Listen for streaming chunks
+    const streamListener = (message) => {
+      if (message.type === 'STREAM_CHUNK' && message.fullText) {
+        fullText = message.fullText;
+        streamingText.innerHTML = this.formatMessage(fullText);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      } else if (message.type === 'STREAM_COMPLETE') {
+        fullText = message.response;
+        streamingText.innerHTML = this.formatMessage(fullText);
+        assistantMsg.id = '';
+        chrome.runtime.onMessage.removeListener(streamListener);
+        
+        // Detect tasks
+        this.detectAndDisplayTasks(fullText);
+      }
+    };
+    
+    chrome.runtime.onMessage.addListener(streamListener);
 
     try {
-      // Get fresh context if we don't have it
-      if (!this.currentContext) {
-        // We'll rely on the background script to fetch it via message handler
-      }
-
-      // Send to AI
-      const aiResponse = await chrome.runtime.sendMessage({
-        type: 'SEND_MESSAGE',
+      // Try streaming first
+      const streamResponse = await chrome.runtime.sendMessage({
+        type: 'STREAM_MESSAGE',
         data: {
           prompt: text,
           context: this.currentContext
@@ -165,23 +189,92 @@ class SidePanel {
         tabId: this.currentTabId
       });
 
-      // Remove typing indicator
-      this.removeTypingIndicator(typingId);
-
-      if (aiResponse.error) {
-        throw new Error(aiResponse.error);
+      // If streaming not supported, fall back to regular
+      if (streamResponse && streamResponse.error) {
+        throw new Error(streamResponse.error);
       }
+      
+      if (!streamResponse || !streamResponse.streaming) {
+        chrome.runtime.onMessage.removeListener(streamListener);
+        assistantMsg.remove();
+        
+        // Fallback to non-streaming
+        const aiResponse = await chrome.runtime.sendMessage({
+          type: 'SEND_MESSAGE',
+          data: {
+            prompt: text,
+            context: this.currentContext
+          },
+          tabId: this.currentTabId
+        });
 
-      // Add assistant response
-      this.addMessage('assistant', aiResponse.response);
+        if (aiResponse.error) {
+          throw new Error(aiResponse.error);
+        }
+
+        this.addMessage('assistant', aiResponse.response);
+        this.detectAndDisplayTasks(aiResponse.response);
+      }
     } catch (error) {
-      this.removeTypingIndicator(typingId);
+      chrome.runtime.onMessage.removeListener(streamListener);
+      if (assistantMsg.parentNode) {
+        assistantMsg.remove();
+      }
       this.addMessage('assistant', `Sorry, I encountered an error: ${error.message}. Please check your API key in settings.`, true);
     } finally {
       this.isLoading = false;
       sendBtn.disabled = false;
       input.focus();
     }
+  }
+  
+  async detectAndDisplayTasks(text) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'DETECT_TASKS',
+        text: text
+      });
+      
+      if (response && response.tasks && response.tasks.length > 0) {
+        // Display tasks in side panel
+        this.displayTasks(response.tasks);
+      }
+    } catch (e) {
+      console.log('Task detection failed', e);
+    }
+  }
+  
+  displayTasks(tasks) {
+    // Add tasks section to side panel
+    let tasksSection = document.getElementById('tasks-section');
+    if (!tasksSection) {
+      tasksSection = document.createElement('div');
+      tasksSection.id = 'tasks-section';
+      tasksSection.className = 'tasks-section';
+      tasksSection.innerHTML = '<h3>Tasks</h3><div class="tasks-list"></div>';
+      const chatContainer = document.getElementById('chat-container');
+      chatContainer.insertBefore(tasksSection, chatContainer.firstChild);
+    }
+    
+    const tasksList = tasksSection.querySelector('.tasks-list');
+    tasks.forEach(task => {
+      const taskItem = document.createElement('div');
+      taskItem.className = 'task-item';
+      taskItem.innerHTML = `
+        <input type="checkbox" class="task-checkbox">
+        <span class="task-text">${task.text}</span>
+      `;
+      
+      taskItem.querySelector('.task-checkbox').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          taskItem.classList.add('completed');
+        } else {
+          taskItem.classList.remove('completed');
+        }
+      });
+      
+      tasksList.appendChild(taskItem);
+    });
   }
 
   showTypingIndicator() {
