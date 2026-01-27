@@ -442,12 +442,14 @@ class FloatingUI {
       }
       
       .action-btn {
-        padding: 6px 12px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 14px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
         color: #e5e7eb;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -455,9 +457,16 @@ class FloatingUI {
       }
       
       .action-btn:hover {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.25);
         transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+      
+      .action-btn svg {
+        width: 14px;
+        height: 14px;
+        margin-right: 6px;
       }
 
       .input-area {
