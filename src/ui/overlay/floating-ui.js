@@ -6,6 +6,7 @@ class FloatingUI {
     this.isWindowOpen = false;
     this.shadowRoot = null;
     this.currentContext = null;
+    this.faviconButton = null;
     this.init();
   }
 
@@ -45,6 +46,7 @@ class FloatingUI {
     // Create shadow root
     this.shadowRoot = host.attachShadow({ mode: 'closed' });
     this.injectStyles();
+    this.createFaviconButton();
     this.createCommandBar();
     this.createMainWindow();
   }
@@ -396,8 +398,141 @@ class FloatingUI {
       .overlay-backdrop.visible {
         opacity: 1;
       }
+
+      .favicon-button {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #1a1a1a;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(99, 102, 241, 0.5);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 2147483646;
+        backdrop-filter: blur(10px);
+      }
+
+      .favicon-button:hover {
+        transform: translateX(-50%) scale(1.1);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(99, 102, 241, 0.2);
+      }
+
+      .favicon-button:active {
+        transform: translateX(-50%) scale(0.95);
+      }
+
+      .favicon-button img {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        object-fit: cover;
+      }
+
+      .favicon-button .default-icon {
+        width: 28px;
+        height: 28px;
+        fill: #6366f1;
+      }
     `;
     this.shadowRoot.appendChild(style);
+  }
+
+  createFaviconButton() {
+    this.faviconButton = document.createElement('div');
+    this.faviconButton.className = 'favicon-button';
+    this.faviconButton.title = 'Open Aura Assistant';
+    this.faviconButton.setAttribute('aria-label', 'Open Aura Assistant');
+    
+    // Update favicon
+    this.updateFavicon();
+    
+    // Add click handler
+    this.faviconButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleCommandBar();
+    });
+
+    // Add hover effect
+    this.faviconButton.addEventListener('mouseenter', () => {
+      this.faviconButton.style.transform = 'translateX(-50%) scale(1.1)';
+    });
+
+    this.faviconButton.addEventListener('mouseleave', () => {
+      this.faviconButton.style.transform = 'translateX(-50%) scale(1)';
+    });
+
+    this.shadowRoot.appendChild(this.faviconButton);
+    
+    // Update favicon when page changes
+    this.observePageChanges();
+  }
+
+  updateFavicon() {
+    if (!this.faviconButton) return;
+    
+    // Try to get favicon from current page
+    const favicon = document.querySelector('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]');
+    let faviconUrl = null;
+    
+    if (favicon) {
+      faviconUrl = favicon.href;
+      // Handle relative URLs
+      if (faviconUrl.startsWith('/')) {
+        faviconUrl = window.location.origin + faviconUrl;
+      }
+    } else {
+      // Fallback to default favicon location
+      faviconUrl = `${window.location.origin}/favicon.ico`;
+    }
+    
+    // Create or update favicon image
+    let faviconImg = this.faviconButton.querySelector('img');
+    
+    if (!faviconImg) {
+      faviconImg = document.createElement('img');
+      this.faviconButton.innerHTML = '';
+      this.faviconButton.appendChild(faviconImg);
+    }
+    
+    faviconImg.src = faviconUrl;
+    faviconImg.alt = document.title || 'Page icon';
+    
+    // Fallback to default icon if image fails to load
+    faviconImg.onerror = () => {
+      this.faviconButton.innerHTML = `
+        <svg class="default-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      `;
+    };
+  }
+
+  observePageChanges() {
+    // Update favicon when URL changes (for SPAs)
+    let lastUrl = window.location.href;
+    
+    const checkUrl = () => {
+      if (window.location.href !== lastUrl) {
+        lastUrl = window.location.href;
+        setTimeout(() => this.updateFavicon(), 500);
+      }
+    };
+    
+    // Check periodically for SPA navigation
+    setInterval(checkUrl, 1000);
+    
+    // Also listen for popstate (back/forward navigation)
+    window.addEventListener('popstate', () => {
+      setTimeout(() => this.updateFavicon(), 500);
+    });
   }
 
   createCommandBar() {
