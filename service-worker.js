@@ -24,7 +24,14 @@ chrome.action.onClicked.addListener((tab) => {
   chrome.tabs.sendMessage(tab.id, { type: 'OPEN_AURA' }).catch(() => {
     // If content script isn't ready, open side panel as fallback
     // This is OK because action.onClicked IS a user gesture
-    openSidePanel(tab.windowId);
+    // Call it synchronously to preserve user gesture context
+    if (chrome.sidePanel && chrome.sidePanel.open) {
+      try {
+        chrome.sidePanel.open({ windowId: tab.windowId });
+      } catch (error) {
+        console.warn('Failed to open side panel:', error);
+      }
+    }
   });
 });
 

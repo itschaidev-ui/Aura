@@ -145,12 +145,9 @@ class Overlay {
 
   async openSidePanel() {
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      // Send message to service worker to open side panel
+      // Send message to open floating UI instead (doesn't require user gesture)
       chrome.runtime.sendMessage({
-        type: 'OPEN_SIDE_PANEL',
-        tabId: tab.id
+        type: 'OPEN_AURA'
       });
 
       // Visual feedback
@@ -159,7 +156,7 @@ class Overlay {
         this.magicDot.style.transform = 'scale(1)';
       }, 150);
     } catch (error) {
-      console.error('Failed to open side panel:', error);
+      console.error('Failed to open Aura:', error);
     }
   }
 
