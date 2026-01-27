@@ -1102,16 +1102,17 @@ class FloatingUI {
     messagesContainer.appendChild(userMsg);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
-    // Add streaming message container
-    const assistantMsg = document.createElement('div');
-    assistantMsg.className = 'message assistant';
-    assistantMsg.id = 'streaming-message';
-    assistantMsg.innerHTML = '<span class="streaming-text"></span>';
-    messagesContainer.appendChild(assistantMsg);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    
-    const streamingText = assistantMsg.querySelector('.streaming-text');
-    let fullText = '';
+      // Add streaming message container
+      const assistantMsg = document.createElement('div');
+      assistantMsg.className = 'message assistant';
+      assistantMsg.id = 'streaming-message';
+      assistantMsg.innerHTML = '<span class="streaming-text"></span><span class="streaming-cursor"></span>';
+      messagesContainer.appendChild(assistantMsg);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      const streamingText = assistantMsg.querySelector('.streaming-text');
+      const streamingCursor = assistantMsg.querySelector('.streaming-cursor');
+      let fullText = '';
     
     // Listen for streaming chunks
     const streamListener = (message) => {
@@ -1122,6 +1123,7 @@ class FloatingUI {
       } else if (message.type === 'STREAM_COMPLETE') {
         fullText = message.response;
         streamingText.innerHTML = this.formatMessage(fullText);
+        streamingCursor.remove(); // Remove cursor when complete
         assistantMsg.id = ''; // Remove streaming ID
         chrome.runtime.onMessage.removeListener(streamListener);
         

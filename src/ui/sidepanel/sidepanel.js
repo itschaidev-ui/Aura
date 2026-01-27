@@ -151,12 +151,13 @@ class SidePanel {
     const assistantMsg = document.createElement('div');
     assistantMsg.className = 'message assistant';
     assistantMsg.id = assistantMsgId;
-    assistantMsg.innerHTML = '<span class="streaming-text"></span>';
+    assistantMsg.innerHTML = '<span class="streaming-text"></span><span class="streaming-cursor"></span>';
     const messagesContainer = document.getElementById('messages');
     messagesContainer.appendChild(assistantMsg);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
     const streamingText = assistantMsg.querySelector('.streaming-text');
+    const streamingCursor = assistantMsg.querySelector('.streaming-cursor');
     let fullText = '';
     
     // Listen for streaming chunks
@@ -168,6 +169,7 @@ class SidePanel {
       } else if (message.type === 'STREAM_COMPLETE') {
         fullText = message.response;
         streamingText.innerHTML = this.formatMessage(fullText);
+        streamingCursor.remove(); // Remove cursor when complete
         assistantMsg.id = '';
         chrome.runtime.onMessage.removeListener(streamListener);
         
