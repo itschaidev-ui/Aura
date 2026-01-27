@@ -121,9 +121,10 @@ export class ApiClient {
       throw new Error('Gemini API key not configured. Please set it in the extension settings.');
     }
     
-    // Use Gemini Pro (try gemini-pro first, fallback to gemini-1.5-pro if needed)
-    const model = 'gemini-pro';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+    // Use Gemini 1.5 Flash (faster and more reliable)
+    // Try v1beta first (more stable), fallback to v1 if needed
+    const model = 'gemini-1.5-flash';
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     
     const parts = [{ text: prompt }];
     
@@ -305,7 +306,8 @@ export class ApiClient {
     }
     
     // Gemini streaming endpoint
-    const model = 'gemini-pro';
+    // Use v1beta for streaming (more stable)
+    const model = 'gemini-1.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${key}`;
     
     const parts = [{ text: prompt }];
@@ -326,7 +328,9 @@ export class ApiClient {
       }],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 2000
+        maxOutputTokens: 2000,
+        topP: 0.95,
+        topK: 40
       }
     };
     
@@ -342,33 +346,63 @@ export class ApiClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error?.message || response.statusText;
+        console.error('Gemini API error details:', errorData);
         throw new Error(`Gemini API error: ${response.status} - ${errorMessage}`);
       }
       
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullResponse = '';
+      let buffer = '';
       
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
         
         for (const line of lines) {
-          if (line.trim() && line.startsWith('data: ')) {
+          if (line.trim()) {
+            // Gemini streaming returns JSON objects, not SSE format
             try {
-              const data = JSON.parse(line.slice(6));
+              const data = JSON.parse(line);
               const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
               if (text) {
                 fullResponse += text;
                 onChunk(text);
               }
             } catch (e) {
-              // Ignore parse errors
+              // Try SSE format if JSON fails
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                  if (text) {
+                    fullResponse += text;
+                    onChunk(text);
+                  }
+                } catch (e2) {
+                  // Ignore parse errors
+                }
+              }
             }
           }
+        }
+      }
+      
+      // Process remaining buffer
+      if (buffer.trim()) {
+        try {
+          const data = JSON.parse(buffer);
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            fullResponse += text;
+            onChunk(text);
+          }
+        } catch (e) {
+          // Ignore
         }
       }
       
