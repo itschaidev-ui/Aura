@@ -149,9 +149,12 @@ class FloatingUI {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 720px;
+        width: 600px;
+        height: 600px;
+        min-width: 400px;
+        min-height: 400px;
         max-width: 90vw;
-        max-height: 85vh;
+        max-height: 90vh;
         background: #1a1a1a;
         border-radius: 16px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
@@ -160,10 +163,15 @@ class FloatingUI {
         flex-direction: column;
         opacity: 0;
         transform: translate(-50%, -50%) scale(0.95);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         backdrop-filter: blur(20px);
         overflow: hidden;
         z-index: 2147483648;
+        resize: both;
+      }
+
+      .main-window.resizing {
+        transition: none;
       }
 
       .main-window.visible {
@@ -399,6 +407,21 @@ class FloatingUI {
 
       .overlay-backdrop.visible {
         opacity: 1;
+      }
+
+      .resize-handle {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 20px;
+        height: 20px;
+        cursor: nwse-resize;
+        z-index: 10;
+        background: linear-gradient(135deg, transparent 0%, transparent 30%, rgba(255, 255, 255, 0.2) 30%, rgba(255, 255, 255, 0.2) 50%, transparent 50%);
+      }
+
+      .resize-handle:hover {
+        background: linear-gradient(135deg, transparent 0%, transparent 30%, rgba(255, 255, 255, 0.4) 30%, rgba(255, 255, 255, 0.4) 50%, transparent 50%);
       }
 
       .favicon-button {
@@ -761,6 +784,144 @@ class FloatingUI {
     // Main window (added after backdrop, higher z-index - appears on top)
     this.mainWindow.style.zIndex = '2147483648';
     this.shadowRoot.appendChild(this.mainWindow);
+    
+    // Add resize handle
+    this.resizeHandle = document.createElement('div');
+    this.resizeHandle.className = 'resize-handle';
+    this.mainWindow.appendChild(this.resizeHandle);
+  }
+
+  setupResize() {
+    let startX, startY, startWidth, startHeight;
+    
+    const startResize = (e) => {
+      e.preventDefault();
+      this.isResizing = true;
+      this.mainWindow.classList.add('resizing');
+      
+      startX = e.clientX;
+      startY = e.clientY;
+      const rect = this.mainWindow.getBoundingClientRect();
+      startWidth = rect.width;
+      startHeight = rect.height;
+      
+      document.addEventListener('mousemove', doResize);
+      document.addEventListener('mouseup', stopResize);
+    };
+    
+      const doResize = (e) => {
+      if (!this.isResizing) return;
+      
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      let newWidth = startWidth + deltaX;
+      let newHeight = startHeight + deltaY;
+      
+      // Keep it square by using the larger dimension
+      const size = Math.max(newWidth, newHeight);
+      newWidth = size;
+      newHeight = size;
+      
+      // Apply min/max constraints
+      newWidth = Math.max(400, Math.min(newWidth, window.innerWidth * 0.9));
+      newHeight = Math.max(400, Math.min(newHeight, window.innerHeight * 0.9));
+      
+      this.mainWindow.style.width = newWidth + 'px';
+      this.mainWindow.style.height = newHeight + 'px';
+      
+      // Save size
+      this.saveWindowSize(newWidth, newHeight);
+      
+      // Update position if needed to keep in viewport
+      const rect = this.mainWindow.getBoundingClientRect();
+      if (rect.right > window.innerWidth) {
+        this.mainWindow.style.left = (window.innerWidth - newWidth) + 'px';
+      }
+      if (rect.bottom > window.innerHeight) {
+        this.mainWindow.style.top = (window.innerHeight - newHeight) + 'px';
+      }
+    };
+    
+    const stopResize = () => {
+      this.isResizing = false;
+      this.mainWindow.classList.remove('resizing');
+      document.removeEventListener('mousemove', doResize);
+      document.removeEventListener('mouseup', stopResize);
+    };
+    
+    // Make the entire window draggable from header
+    let isDragging = false;
+    let dragStartX, dragStartY, startLeft, startTop;
+    
+    const header = this.mainWindow.querySelector('.window-header');
+    if (header) {
+      header.style.cursor = 'move';
+      
+      header.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.window-btn, .window-actions')) return;
+        isDragging = true;
+        const rect = this.mainWindow.getBoundingClientRect();
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        startLeft = rect.left;
+        startTop = rect.top;
+        
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', stopDrag);
+      });
+    }
+    
+    const doDrag = (e) => {
+      if (!isDragging) return;
+      
+      const deltaX = e.clientX - dragStartX;
+      const deltaY = e.clientY - dragStartY;
+      
+      const newLeft = startLeft + deltaX;
+      const newTop = startTop + deltaY;
+      
+      // Keep within viewport
+      const maxLeft = window.innerWidth - this.mainWindow.offsetWidth;
+      const maxTop = window.innerHeight - this.mainWindow.offsetHeight;
+      
+      this.mainWindow.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+      this.mainWindow.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+      this.mainWindow.style.transform = 'none';
+      
+      // Save position
+      this.saveWindowPosition();
+    };
+    
+    const stopDrag = () => {
+      isDragging = false;
+      document.removeEventListener('mousemove', doDrag);
+      document.removeEventListener('mouseup', stopDrag);
+    };
+    
+    // Resize handle
+    this.resizeHandle?.addEventListener('mousedown', startResize);
+  }
+
+  loadWindowSize() {
+    try {
+      const saved = localStorage.getItem('aura-window-size');
+      if (saved) {
+        const { width, height } = JSON.parse(saved);
+        this.mainWindow.style.width = width + 'px';
+        this.mainWindow.style.height = height + 'px';
+      }
+    } catch (e) {
+      // Use default size
+    }
+  }
+
+  saveWindowSize(width, height) {
+    try {
+      localStorage.setItem('aura-window-size', JSON.stringify({ width, height }));
+    } catch (e) {
+      // Ignore storage errors
+    }
   }
 
   toggleCommandBar() {
@@ -790,6 +951,9 @@ class FloatingUI {
     this.backdrop.classList.add('visible');
     this.hideCommandBar();
     
+    // Load saved position if exists
+    this.loadWindowPosition();
+    
     // Update context display
     this.updateContextDisplay();
     
@@ -814,6 +978,32 @@ class FloatingUI {
       const input = this.mainWindow.querySelector('.input-field');
       input.value = initialQuery;
       this.sendMessage(initialQuery);
+    }
+  }
+
+  loadWindowPosition() {
+    try {
+      const saved = localStorage.getItem('aura-window-position');
+      if (saved) {
+        const { left, top } = JSON.parse(saved);
+        this.mainWindow.style.left = left + 'px';
+        this.mainWindow.style.top = top + 'px';
+        this.mainWindow.style.transform = 'none';
+      }
+    } catch (e) {
+      // Use default centered position
+    }
+  }
+
+  saveWindowPosition() {
+    try {
+      const rect = this.mainWindow.getBoundingClientRect();
+      localStorage.setItem('aura-window-position', JSON.stringify({
+        left: rect.left,
+        top: rect.top
+      }));
+    } catch (e) {
+      // Ignore storage errors
     }
   }
   
