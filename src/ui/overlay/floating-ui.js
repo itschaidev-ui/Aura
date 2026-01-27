@@ -400,24 +400,26 @@ class FloatingUI {
       }
 
       .favicon-button {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: #1a1a1a;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(99, 102, 241, 0.5);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: auto;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 2147483646;
-        backdrop-filter: blur(10px);
+        position: fixed !important;
+        top: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 56px !important;
+        height: 56px !important;
+        border-radius: 50% !important;
+        background: #1a1a1a !important;
+        border: 2px solid rgba(255, 255, 255, 0.2) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(99, 102, 241, 0.5) !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        pointer-events: auto !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        z-index: 2147483647 !important;
+        backdrop-filter: blur(10px) !important;
+        visibility: visible !important;
+        opacity: 1 !important;
       }
 
       .favicon-button:hover {
@@ -451,12 +453,42 @@ class FloatingUI {
     this.faviconButton.title = 'Open Aura Assistant';
     this.faviconButton.setAttribute('aria-label', 'Open Aura Assistant');
     
-    // Update favicon
+    // Set inline styles to ensure visibility
+    this.faviconButton.style.cssText = `
+      position: fixed !important;
+      top: 20px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      width: 56px !important;
+      height: 56px !important;
+      border-radius: 50% !important;
+      background: #1a1a1a !important;
+      border: 2px solid rgba(255, 255, 255, 0.2) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+      cursor: pointer !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      pointer-events: auto !important;
+      z-index: 2147483647 !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    `;
+    
+    // Add default icon immediately so button is always visible
+    this.faviconButton.innerHTML = `
+      <svg class="default-icon" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" style="width: 28px; height: 28px;">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    `;
+    
+    // Update favicon (will replace default icon if found)
     this.updateFavicon();
     
     // Add click handler
     this.faviconButton.addEventListener('click', (e) => {
       e.stopPropagation();
+      e.preventDefault();
       this.toggleCommandBar();
     });
 
@@ -473,24 +505,33 @@ class FloatingUI {
     
     // Update favicon when page changes
     this.observePageChanges();
+    
+    // Log for debugging
+    console.log('Aura favicon button created at top center');
   }
 
   updateFavicon() {
     if (!this.faviconButton) return;
     
-    // Try to get favicon from current page
-    const favicon = document.querySelector('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]');
+    // Try multiple methods to get favicon
     let faviconUrl = null;
     
-    if (favicon) {
-      faviconUrl = favicon.href;
+    // Method 1: Check for favicon link tags
+    const faviconLink = document.querySelector('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]');
+    if (faviconLink && faviconLink.href) {
+      faviconUrl = faviconLink.href;
       // Handle relative URLs
       if (faviconUrl.startsWith('/')) {
         faviconUrl = window.location.origin + faviconUrl;
+      } else if (!faviconUrl.startsWith('http')) {
+        faviconUrl = window.location.origin + '/' + faviconUrl;
       }
-    } else {
-      // Fallback to default favicon location
-      faviconUrl = `${window.location.origin}/favicon.ico`;
+    }
+    
+    // Method 2: Try Google's favicon service as fallback
+    if (!faviconUrl) {
+      const domain = window.location.hostname;
+      faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
     }
     
     // Create or update favicon image
@@ -498,6 +539,7 @@ class FloatingUI {
     
     if (!faviconImg) {
       faviconImg = document.createElement('img');
+      faviconImg.style.cssText = 'width: 32px; height: 32px; border-radius: 6px; object-fit: cover;';
       this.faviconButton.innerHTML = '';
       this.faviconButton.appendChild(faviconImg);
     }
@@ -507,11 +549,28 @@ class FloatingUI {
     
     // Fallback to default icon if image fails to load
     faviconImg.onerror = () => {
-      this.faviconButton.innerHTML = `
-        <svg class="default-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-      `;
+      // Try Google favicon service
+      const domain = window.location.hostname;
+      const googleFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      
+      if (faviconImg.src !== googleFavicon) {
+        faviconImg.src = googleFavicon;
+        faviconImg.onerror = () => {
+          // Final fallback to SVG icon
+          this.faviconButton.innerHTML = `
+            <svg class="default-icon" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" style="width: 28px; height: 28px;">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          `;
+        };
+      } else {
+        // Already tried Google, show default icon
+        this.faviconButton.innerHTML = `
+          <svg class="default-icon" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" style="width: 28px; height: 28px;">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        `;
+      }
     };
   }
 
