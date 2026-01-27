@@ -667,12 +667,6 @@ class FloatingUI {
     this.mainWindow = document.createElement('div');
     this.mainWindow.className = 'main-window';
     
-    // Load saved size
-    this.loadWindowSize();
-    
-    // Make resizable
-    this.setupResize();
-    
     // Header
     const header = document.createElement('div');
     header.className = 'window-header';
@@ -793,6 +787,12 @@ class FloatingUI {
     this.resizeHandle = document.createElement('div');
     this.resizeHandle.className = 'resize-handle';
     this.mainWindow.appendChild(this.resizeHandle);
+    
+    // Load saved size (after window is created)
+    this.loadWindowSize();
+    
+    // Setup resize functionality (after handle is created)
+    this.setupResize();
   }
 
   setupResize() {
