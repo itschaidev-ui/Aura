@@ -1209,16 +1209,44 @@ class FloatingUI {
   }
 
   async openMainWindow(initialQuery = '') {
+    if (this.isWindowOpen && this.mainWindow && this.mainWindow.parentNode) {
+      // If already open, just focus the input
+      const input = this.mainWindow?.querySelector('.input-field');
+      if (input) {
+        input.focus();
+        if (initialQuery) {
+          input.value = initialQuery;
+          this.sendMessage(initialQuery);
+        }
+      }
+      return;
+    }
+    
     this.isWindowOpen = true;
-    this.mainWindow.classList.add('visible');
-    this.backdrop.classList.add('visible');
     this.hideCommandBar();
+    
+    // Ensure window and backdrop are in DOM
+    if (!this.mainWindow.parentNode) {
+      this.shadowRoot.appendChild(this.backdrop);
+      this.shadowRoot.appendChild(this.mainWindow);
+    }
     
     // Load saved position if exists
     this.loadWindowPosition();
     
+    // Show window with animation - use double requestAnimationFrame for smoother transition
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (this.mainWindow && this.backdrop) {
+          this.mainWindow.classList.add('visible');
+          this.backdrop.classList.add('visible');
+        }
+      });
+    });
+    
     // Update context display
     this.updateContextDisplay();
+    this.updateContextTag();
     
     // Request fresh context
     try {
@@ -1228,6 +1256,7 @@ class FloatingUI {
       if (response && response.context) {
         this.currentContext = response.context;
         this.updateContextDisplay();
+        this.updateContextTag();
       }
     } catch (e) {
       // Extension context invalidated - extension was reloaded
@@ -1237,11 +1266,17 @@ class FloatingUI {
       }
     }
     
-    if (initialQuery) {
-      const input = this.mainWindow.querySelector('.input-field');
-      input.value = initialQuery;
-      this.sendMessage(initialQuery);
-    }
+    // Focus input after a short delay
+    setTimeout(() => {
+      const input = this.mainWindow?.querySelector('.input-field');
+      if (input) {
+        input.focus();
+        if (initialQuery) {
+          input.value = initialQuery;
+          this.sendMessage(initialQuery);
+        }
+      }
+    }, 100);
   }
 
   loadWindowPosition() {
@@ -1287,19 +1322,13 @@ class FloatingUI {
     this.isWindowOpen = false;
     if (this.mainWindow) {
       this.mainWindow.classList.remove('visible');
-      this.mainWindow.style.opacity = '0';
-      this.mainWindow.style.transform = 'translate(-50%, -50%) scale(0.95)';
     }
     if (this.backdrop) {
       this.backdrop.classList.remove('visible');
     }
     
-    // Don't remove from DOM immediately - keep for reuse
-    // Only remove after animation completes
-    setTimeout(() => {
-      // Keep elements in DOM but hidden for faster reopening
-      // Only remove if user explicitly wants to close
-    }, 300);
+    // Keep elements in DOM but hidden for faster reopening
+    // Don't remove them - just hide
   }
   
   updateContextTag() {
