@@ -112,21 +112,31 @@ export class MessageHandler {
       let imageData = null;
 
       if (context) {
-        // Capture screenshot if this is a visual question (simple heuristic)
-        const isVisualQuestion = prompt.toLowerCase().match(/look|see|image|screenshot|visual|picture|screen/);
+        // Capture screenshot if this is a visual question (enhanced heuristic)
+        const visualKeywords = /look|see|image|screenshot|visual|picture|screen|chart|graph|diagram|what.*show|describe.*appearance|how.*look/i;
+        const isVisualQuestion = visualKeywords.test(prompt);
         
         if (isVisualQuestion) {
           try {
-            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
-            imageData = dataUrl; // API client expects data URL for OpenAI
+            const dataUrl = await chrome.tabs.captureVisibleTab(null, { 
+              format: 'png',
+              quality: 90 
+            });
+            imageData = dataUrl; // API client expects data URL
           } catch (e) {
             console.warn('Screenshot capture failed during message handling', e);
+            // Continue without screenshot
           }
         }
 
-        // Format the text prompt with context
-        const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
-        finalPrompt = formatted;
+        // Format the text prompt with context using ContextProcessor
+        try {
+          const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
+          finalPrompt = formatted;
+        } catch (e) {
+          console.warn('Context formatting failed, using prompt without context:', e);
+          // Fallback to original prompt if formatting fails
+        }
       }
       
       // Call API
@@ -161,20 +171,30 @@ export class MessageHandler {
       let imageData = null;
 
       if (context) {
-        const isVisualQuestion = prompt.toLowerCase().match(/look|see|image|screenshot|visual|picture|screen/);
+        // Enhanced visual question detection
+        const visualKeywords = /look|see|image|screenshot|visual|picture|screen|chart|graph|diagram|what.*show|describe.*appearance|how.*look/i;
+        const isVisualQuestion = visualKeywords.test(prompt);
         
         if (isVisualQuestion) {
           try {
-            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            const dataUrl = await chrome.tabs.captureVisibleTab(null, { 
+              format: 'png',
+              quality: 90 
+            });
             imageData = dataUrl;
           } catch (e) {
-            console.warn('Screenshot capture failed', e);
+            console.warn('Screenshot capture failed during streaming', e);
+            // Continue without screenshot
           }
         }
 
-        if (context) {
+        // Format context using ContextProcessor
+        try {
           const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
           finalPrompt = formatted;
+        } catch (e) {
+          console.warn('Context formatting failed during streaming, using prompt without context:', e);
+          // Fallback to original prompt if formatting fails
         }
       }
       
