@@ -157,7 +157,7 @@ class FloatingUI {
         max-height: 90vh;
         background: #202124;
         border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
         pointer-events: auto;
         display: flex;
         flex-direction: column;
@@ -254,8 +254,9 @@ class FloatingUI {
       .window-content {
         flex: 1;
         overflow-y: auto;
-        padding: 20px;
-        color: #ffffff;
+        padding: 24px;
+        color: #f3f4f6;
+        background: transparent;
       }
 
       .window-content::-webkit-scrollbar {
@@ -324,25 +325,112 @@ class FloatingUI {
       }
 
       .message {
-        padding: 12px 16px;
-        border-radius: 12px;
+        padding: 14px 18px;
+        border-radius: 16px;
         max-width: 85%;
         word-wrap: break-word;
-        line-height: 1.6;
-        font-size: 14px;
+        line-height: 1.65;
+        font-size: 15px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+        margin-bottom: 4px;
+        animation: messageSlideIn 0.3s ease-out;
+      }
+      
+      @keyframes messageSlideIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       .message.user {
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         color: white;
         align-self: flex-end;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
       }
 
       .message.assistant {
-        background: rgba(255, 255, 255, 0.1);
-        color: #e5e7eb;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f3f4f6;
         align-self: flex-start;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .message.assistant code {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+        font-size: 13px;
+      }
+      
+      .message.assistant pre {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 8px 0;
+      }
+      
+      .message.assistant a {
+        color: #6366f1;
+        text-decoration: none;
+      }
+      
+      .message.assistant a {
+        color: #6366f1;
+        text-decoration: none;
+      }
+      
+      .message.assistant a:hover {
+        text-decoration: underline;
+      }
+      
+      .message.assistant .inline-code {
+        background: rgba(0, 0, 0, 0.4);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Consolas', monospace;
+        font-size: 13px;
+        color: #fbbf24;
+      }
+      
+      .message.assistant .code-block {
+        background: rgba(0, 0, 0, 0.4);
+        padding: 12px 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 8px 0;
+        display: block;
+        font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Consolas', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #e5e7eb;
+      }
+      
+      .message.assistant ul {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+      
+      .message.assistant li {
+        margin: 4px 0;
+        line-height: 1.6;
+      }
+      
+      .message.assistant strong {
+        font-weight: 600;
+        color: #ffffff;
+      }
+      
+      .message.assistant em {
+        font-style: italic;
+        opacity: 0.9;
       }
 
       .input-area {
@@ -391,15 +479,17 @@ class FloatingUI {
         gap: 8px;
         align-items: center;
         background: #1a1a1a;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        padding: 14px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 18px;
+        padding: 16px 18px;
         position: relative;
+        transition: all 0.2s ease;
       }
 
       .input-wrapper:focus-within {
-        border-color: rgba(255, 255, 255, 0.15);
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+        background: #1f1f1f;
       }
       
       .input-actions {
@@ -437,18 +527,19 @@ class FloatingUI {
         flex: 1;
         background: transparent;
         border: none;
-        color: #ffffff;
-        font-size: 14px;
+        color: #f3f4f6;
+        font-size: 15px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
         outline: none;
         resize: none;
         max-height: 120px;
         overflow-y: auto;
-        line-height: 1.5;
+        line-height: 1.6;
+        padding: 0;
       }
 
       .input-field::placeholder {
-        color: #9ca3af;
+        color: #6b7280;
       }
 
       .send-btn {
@@ -561,47 +652,67 @@ class FloatingUI {
       }
 
       .tasks-section {
-        margin-bottom: 24px;
-        padding: 16px;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 8px;
+        margin: 20px 0;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        animation: slideIn 0.3s ease-out;
+      }
+      
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       .tasks-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        margin-top: 12px;
+        gap: 10px;
+        margin-top: 16px;
       }
 
       .task-item {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 12px;
-        padding: 8px;
-        border-radius: 6px;
-        transition: background 0.2s ease;
+        padding: 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        cursor: pointer;
       }
 
       .task-item:hover {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.06);
       }
 
       .task-item.completed .task-text {
         text-decoration: line-through;
-        opacity: 0.6;
+        opacity: 0.5;
+        color: #9ca3af;
       }
 
       .task-checkbox {
         width: 18px;
         height: 18px;
         cursor: pointer;
+        margin-top: 2px;
+        accent-color: #6366f1;
+        flex-shrink: 0;
       }
 
       .task-text {
         flex: 1;
         font-size: 14px;
         color: #e5e7eb;
+        line-height: 1.5;
+        cursor: pointer;
       }
 
       .streaming-text {
@@ -883,9 +994,10 @@ class FloatingUI {
     const content = document.createElement('div');
     content.className = 'window-content';
     
-    // Recent Activity
+    // Recent Activity - Hidden by default (like Highlight AI)
     const recentActivity = document.createElement('div');
     recentActivity.className = 'recent-activity';
+    recentActivity.style.display = 'none'; // Hide context section initially
     recentActivity.innerHTML = `
       <div class="section-title">Context</div>
       <div class="activity-item" id="context-item">
@@ -1462,35 +1574,91 @@ class FloatingUI {
   }
   
   displayTasks(tasks) {
+    if (!tasks || tasks.length === 0) return;
+    
     // Add tasks section if it doesn't exist
     let tasksSection = this.mainWindow.querySelector('.tasks-section');
     if (!tasksSection) {
       tasksSection = document.createElement('div');
       tasksSection.className = 'tasks-section';
-      tasksSection.innerHTML = '<div class="section-title">Tasks</div><div class="tasks-list"></div>';
+      tasksSection.innerHTML = `
+        <div class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; margin-right: 6px; vertical-align: middle;">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          Tasks
+        </div>
+        <div class="tasks-list"></div>
+      `;
       const content = this.mainWindow.querySelector('.window-content');
-      content.insertBefore(tasksSection, content.firstChild);
+      const messagesContainer = content.querySelector('.chat-messages');
+      if (messagesContainer && messagesContainer.nextSibling) {
+        content.insertBefore(tasksSection, messagesContainer.nextSibling);
+      } else {
+        content.appendChild(tasksSection);
+      }
     }
     
     const tasksList = tasksSection.querySelector('.tasks-list');
+    
+    // Clear existing tasks to avoid duplicates
+    tasksList.innerHTML = '';
+    
     tasks.forEach(task => {
       const taskItem = document.createElement('div');
       taskItem.className = 'task-item';
       taskItem.innerHTML = `
-        <input type="checkbox" class="task-checkbox">
-        <span class="task-text">${task.text}</span>
+        <input type="checkbox" class="task-checkbox" id="task-${Date.now()}-${Math.random()}">
+        <label for="task-${Date.now()}-${Math.random()}" class="task-text">${this.escapeHtml(task.text)}</label>
       `;
       
-      taskItem.querySelector('.task-checkbox').addEventListener('change', (e) => {
+      const checkbox = taskItem.querySelector('.task-checkbox');
+      checkbox.addEventListener('change', (e) => {
         if (e.target.checked) {
           taskItem.classList.add('completed');
+          this.saveTaskCompletion(task.text, true);
         } else {
           taskItem.classList.remove('completed');
+          this.saveTaskCompletion(task.text, false);
         }
       });
       
       tasksList.appendChild(taskItem);
     });
+    
+    // Animate in
+    tasksSection.style.opacity = '0';
+    tasksSection.style.transform = 'translateY(-10px)';
+    requestAnimationFrame(() => {
+      tasksSection.style.transition = 'all 0.3s ease';
+      tasksSection.style.opacity = '1';
+      tasksSection.style.transform = 'translateY(0)';
+    });
+  }
+  
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  async saveTaskCompletion(taskText, completed) {
+    try {
+      const stored = await chrome.storage.local.get('auraTasks');
+      const tasks = stored.auraTasks || [];
+      const taskIndex = tasks.findIndex(t => t.text === taskText);
+      
+      if (taskIndex >= 0) {
+        tasks[taskIndex].completed = completed;
+      } else {
+        tasks.push({ text: taskText, completed, createdAt: Date.now() });
+      }
+      
+      await chrome.storage.local.set({ auraTasks: tasks });
+    } catch (e) {
+      console.log('Failed to save task', e);
+    }
   }
   
   formatMessage(text) {
