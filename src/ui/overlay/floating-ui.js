@@ -155,8 +155,8 @@ class FloatingUI {
         min-height: 400px;
         max-width: 90vw;
         max-height: 90vh;
-        background: #1a1a1a;
-        border-radius: 16px;
+        background: #202124;
+        border-radius: 20px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
         pointer-events: auto;
         display: flex;
@@ -183,18 +183,23 @@ class FloatingUI {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 16px 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        background: transparent;
+        position: relative;
       }
 
       .window-title {
         display: flex;
         align-items: center;
-        gap: 12px;
+        justify-content: center;
+        gap: 10px;
         color: #ffffff;
-        font-size: 16px;
-        font-weight: 600;
+        font-size: 15px;
+        font-weight: 500;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+        flex: 1;
+        text-align: center;
       }
 
       .window-title-logo {
@@ -1255,8 +1260,37 @@ class FloatingUI {
 
   closeMainWindow() {
     this.isWindowOpen = false;
-    this.mainWindow.classList.remove('visible');
-    this.backdrop.classList.remove('visible');
+    if (this.mainWindow) {
+      this.mainWindow.classList.remove('visible');
+      this.mainWindow.style.opacity = '0';
+      this.mainWindow.style.transform = 'translate(-50%, -50%) scale(0.95)';
+    }
+    if (this.backdrop) {
+      this.backdrop.classList.remove('visible');
+    }
+    setTimeout(() => {
+      if (this.mainWindow && this.mainWindow.parentNode) {
+        this.mainWindow.parentNode.removeChild(this.mainWindow);
+      }
+      if (this.backdrop && this.backdrop.parentNode) {
+        this.backdrop.parentNode.removeChild(this.backdrop);
+      }
+    }, 300);
+  }
+  
+  updateContextTag() {
+    const contextTagText = this.mainWindow?.querySelector('#context-tag-text');
+    if (contextTagText) {
+      try {
+        const url = this.currentContext?.url || window.location.href;
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname.replace('www.', '');
+        const path = urlObj.pathname.split('/').filter(p => p).pop() || '';
+        contextTagText.textContent = `${domain} | ${path.substring(0, 20)}${path.length > 20 ? '...' : ''}`;
+      } catch (e) {
+        contextTagText.textContent = 'Current page';
+      }
+    }
   }
 
   async sendMessage(text) {
