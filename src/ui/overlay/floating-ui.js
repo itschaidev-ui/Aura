@@ -35,7 +35,7 @@ class FloatingUI {
     host.style.cssText = `
       position: fixed;
       z-index: 2147483647;
-      pointer-events: none;
+      pointer-events: none; /* Don't block by default */
       top: 0;
       left: 0;
       width: 100%;
@@ -296,6 +296,15 @@ class FloatingUI {
       
       .window-content::-webkit-scrollbar-thumb:hover {
         background: rgba(255, 255, 255, 0.25);
+      }
+      
+      /* Ensure main window is always clickable when visible */
+      .main-window.visible {
+        pointer-events: auto !important;
+      }
+      
+      .main-window:not(.visible) {
+        pointer-events: none !important;
       }
 
       .window-content::-webkit-scrollbar {
@@ -886,6 +895,9 @@ class FloatingUI {
     this.faviconButton.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
+      // Always ensure it's clickable
+      this.faviconButton.style.pointerEvents = 'auto';
+      this.faviconButton.style.zIndex = '2147483649';
       this.toggleCommandBar();
     });
 
