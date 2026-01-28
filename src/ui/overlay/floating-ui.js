@@ -740,15 +740,16 @@ class FloatingUI {
         justify-content: center !important;
         pointer-events: auto !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        z-index: 2147483647 !important;
+        z-index: 2147483649 !important; /* Higher than window to always be clickable */
         backdrop-filter: blur(10px) !important;
         visibility: visible !important;
         opacity: 1 !important;
+        transition: all 0.2s ease !important;
       }
 
       .favicon-button:hover {
-        transform: translateX(-50%) scale(1.1);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(99, 102, 241, 0.2);
+        transform: translateX(-50%) scale(1.05) !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5) !important;
       }
 
       .favicon-button:active {
