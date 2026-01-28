@@ -250,6 +250,25 @@ class FloatingUI {
         width: 18px;
         height: 18px;
       }
+      
+      .window-btn.writing-mode-btn.active {
+        background: rgba(99, 102, 241, 0.2);
+        color: #6366f1;
+      }
+      
+      .writing-mode-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 12px;
+        font-size: 11px;
+        color: #818cf8;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
 
       .window-content {
         flex: 1;
@@ -257,6 +276,24 @@ class FloatingUI {
         padding: 24px;
         color: #f3f4f6;
         background: transparent;
+        scroll-behavior: smooth;
+      }
+      
+      .window-content::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      .window-content::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      
+      .window-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+      }
+      
+      .window-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.25);
       }
 
       .window-content::-webkit-scrollbar {
@@ -322,6 +359,16 @@ class FloatingUI {
         flex-direction: column;
         gap: 16px;
         margin-bottom: 20px;
+        padding: 0 4px;
+      }
+      
+      .chat-messages:empty::before {
+        content: 'Start a conversation with Aura...';
+        color: #6b7280;
+        font-size: 14px;
+        text-align: center;
+        padding: 40px 20px;
+        font-style: italic;
       }
 
       .message {
@@ -475,6 +522,14 @@ class FloatingUI {
         background: transparent;
       }
       
+      .main-window.writing-mode .input-field::placeholder {
+        color: #818cf8;
+      }
+      
+      .main-window.writing-mode .context-tag {
+        opacity: 0.6;
+      }
+      
       .context-tag {
         display: inline-flex;
         align-items: center;
@@ -486,6 +541,11 @@ class FloatingUI {
         color: #9ca3af;
         margin-bottom: 12px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+        transition: all 0.2s ease;
+      }
+      
+      .context-tag:hover {
+        background: rgba(255, 255, 255, 0.12);
       }
       
       .context-tag-icon {
@@ -508,6 +568,11 @@ class FloatingUI {
         color: #e5e7eb;
         margin-bottom: 12px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+        transition: all 0.2s ease;
+      }
+      
+      .model-tag:hover {
+        background: rgba(255, 255, 255, 0.08);
       }
 
       .input-wrapper {
@@ -995,6 +1060,23 @@ class FloatingUI {
     const actions = document.createElement('div');
     actions.className = 'window-actions';
     
+    // Writing mode toggle (like Highlight AI)
+    const writingModeBtn = document.createElement('button');
+    writingModeBtn.className = 'window-btn writing-mode-btn';
+    writingModeBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+    `;
+    writingModeBtn.title = 'Writing Mode';
+    writingModeBtn.addEventListener('click', () => {
+      this.toggleWritingMode();
+    });
+    
     const menuBtn = document.createElement('button');
     menuBtn.className = 'window-btn';
     menuBtn.innerHTML = `
@@ -1019,6 +1101,7 @@ class FloatingUI {
       chrome.tabs.create({ url: chrome.runtime.getURL('src/ui/settings/settings.html') });
     });
     
+    actions.appendChild(writingModeBtn);
     actions.appendChild(menuBtn);
     actions.appendChild(settingsBtn);
     
@@ -1057,6 +1140,19 @@ class FloatingUI {
     // Input area
     const inputArea = document.createElement('div');
     inputArea.className = 'input-area';
+    
+    // Writing mode indicator (hidden by default)
+    const writingModeIndicator = document.createElement('div');
+    writingModeIndicator.className = 'writing-mode-indicator';
+    writingModeIndicator.id = 'writing-mode-indicator';
+    writingModeIndicator.style.display = 'none';
+    writingModeIndicator.innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      <span>Writing Mode</span>
+    `;
     
     // Context tag (like Highlight AI)
     const contextTag = document.createElement('div');
@@ -1148,6 +1244,7 @@ class FloatingUI {
     inputWrapper.appendChild(input);
     inputWrapper.appendChild(inputActions);
     
+    inputArea.appendChild(writingModeIndicator);
     inputArea.appendChild(contextTag);
     inputArea.appendChild(modelTag);
     inputArea.appendChild(inputWrapper);
@@ -1498,6 +1595,7 @@ class FloatingUI {
     if (!text.trim()) return;
     
     const messagesContainer = this.mainWindow.querySelector('#aura-chat-messages');
+    const isWritingMode = this.mainWindow?.classList.contains('writing-mode');
     
     // Add user message
     const userMsg = document.createElement('div');
@@ -1505,6 +1603,11 @@ class FloatingUI {
     userMsg.textContent = text;
     messagesContainer.appendChild(userMsg);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // Save as draft if in writing mode
+    if (isWritingMode) {
+      await this.saveDraft(text);
+    }
     
       // Add streaming message container
       const assistantMsg = document.createElement('div');

@@ -48,6 +48,12 @@ class SidePanel {
     const quickActions = document.querySelectorAll('.quick-action-btn');
     const settingsBtn = document.getElementById('settings-btn');
 
+    // Writing mode button
+    const writingModeBtn = document.getElementById('writing-mode-btn');
+    if (writingModeBtn) {
+      writingModeBtn.addEventListener('click', () => this.toggleWritingMode());
+    }
+    
     // Settings button
     if (settingsBtn) {
       settingsBtn.addEventListener('click', () => this.openSettings());
@@ -151,6 +157,8 @@ class SidePanel {
     this.addMessage('user', text);
     input.value = '';
     input.style.height = 'auto';
+    
+    // Save as draft if needed (writing mode could be added here too)
 
     // Add streaming message container
     const assistantMsgId = `msg-${Date.now()}`;
@@ -391,6 +399,25 @@ class SidePanel {
     chrome.tabs.create({
       url: chrome.runtime.getURL('src/ui/settings/settings.html')
     });
+  }
+  
+  async toggleWritingMode() {
+    const container = document.querySelector('.sidepanel-container');
+    const isWritingMode = container?.classList.toggle('writing-mode');
+    const writingModeBtn = document.getElementById('writing-mode-btn');
+    const input = document.getElementById('message-input');
+    
+    if (isWritingMode) {
+      writingModeBtn?.classList.add('active');
+      if (input) {
+        input.placeholder = 'Write with Aura... (I\'ll remember your style)';
+      }
+    } else {
+      writingModeBtn?.classList.remove('active');
+      if (input) {
+        input.placeholder = 'Ask Aura anything about this page...';
+      }
+    }
   }
 }
 
