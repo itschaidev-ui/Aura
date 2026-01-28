@@ -183,10 +183,11 @@ class FloatingUI {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 12px 20px;
+        padding: 14px 20px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         background: transparent;
         position: relative;
+        flex-shrink: 0;
       }
 
       .window-title {
@@ -273,10 +274,11 @@ class FloatingUI {
       .window-content {
         flex: 1;
         overflow-y: auto;
-        padding: 24px;
+        padding: 20px 24px;
         color: #f3f4f6;
         background: transparent;
         scroll-behavior: smooth;
+        min-height: 0; /* Allow flex shrinking */
       }
       
       .window-content::-webkit-scrollbar {
@@ -310,24 +312,25 @@ class FloatingUI {
       }
 
       .recent-activity {
-        margin-bottom: 24px;
+        margin-bottom: 20px;
       }
 
       .section-title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: #ffffff;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+        letter-spacing: 0.01em;
       }
 
       .activity-item {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 12px;
+        gap: 10px;
+        padding: 10px 12px;
         border-radius: 8px;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         cursor: pointer;
         transition: all 0.2s ease;
         background: rgba(255, 255, 255, 0.03);
@@ -338,8 +341,8 @@ class FloatingUI {
       }
 
       .activity-icon {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         border-radius: 6px;
         display: flex;
         align-items: center;
@@ -349,17 +352,18 @@ class FloatingUI {
 
       .activity-text {
         flex: 1;
-        font-size: 14px;
+        font-size: 13px;
         color: #e5e7eb;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+        line-height: 1.5;
       }
 
       .chat-messages {
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        margin-bottom: 20px;
-        padding: 0 4px;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 0 2px;
       }
       
       .chat-messages:empty::before {
@@ -372,15 +376,15 @@ class FloatingUI {
       }
 
       .message {
-        padding: 14px 18px;
-        border-radius: 16px;
+        padding: 12px 16px;
+        border-radius: 14px;
         max-width: 85%;
         word-wrap: break-word;
-        line-height: 1.65;
-        font-size: 15px;
+        line-height: 1.6;
+        font-size: 14px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-        margin-bottom: 4px;
-        animation: messageSlideIn 0.3s ease-out;
+        margin-bottom: 2px;
+        animation: messageSlideIn 0.25s ease-out;
       }
       
       @keyframes messageSlideIn {
@@ -482,21 +486,22 @@ class FloatingUI {
       
       .message-actions {
         display: flex;
-        gap: 8px;
-        margin-top: 12px;
-        padding-top: 12px;
+        gap: 6px;
+        margin-top: 10px;
+        padding-top: 10px;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
+        flex-wrap: wrap;
       }
       
       .action-btn {
         display: inline-flex;
         align-items: center;
-        padding: 8px 14px;
+        padding: 6px 12px;
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 8px;
+        border-radius: 6px;
         color: #e5e7eb;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -517,9 +522,10 @@ class FloatingUI {
       }
 
       .input-area {
-        padding: 16px 20px 20px 20px;
+        padding: 18px 20px 20px 20px;
         border-top: 1px solid rgba(255, 255, 255, 0.05);
         background: transparent;
+        flex-shrink: 0;
       }
       
       .main-window.writing-mode .input-field::placeholder {
@@ -534,12 +540,12 @@ class FloatingUI {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 12px;
+        padding: 5px 10px;
         background: rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        font-size: 12px;
+        border-radius: 10px;
+        font-size: 11px;
         color: #9ca3af;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
         transition: all 0.2s ease;
       }
@@ -561,12 +567,12 @@ class FloatingUI {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 12px;
+        padding: 5px 10px;
         background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        font-size: 12px;
+        border-radius: 10px;
+        font-size: 11px;
         color: #e5e7eb;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
         transition: all 0.2s ease;
       }
@@ -577,12 +583,12 @@ class FloatingUI {
 
       .input-wrapper {
         display: flex;
-        gap: 8px;
+        gap: 10px;
         align-items: center;
         background: #1a1a1a;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 18px;
-        padding: 16px 18px;
+        border-radius: 16px;
+        padding: 12px 16px;
         position: relative;
         transition: all 0.2s ease;
       }
@@ -682,7 +688,7 @@ class FloatingUI {
         height: 100%;
         background: rgba(0, 0, 0, 0.4);
         backdrop-filter: blur(4px);
-        pointer-events: auto;
+        pointer-events: none; /* Don't block interactions when hidden */
         opacity: 0;
         transition: opacity 0.3s ease;
         z-index: 2147483646;
@@ -690,6 +696,7 @@ class FloatingUI {
 
       .overlay-backdrop.visible {
         opacity: 1;
+        pointer-events: auto; /* Only block when visible */
       }
 
       .resize-handle {
@@ -753,12 +760,12 @@ class FloatingUI {
       }
 
       .tasks-section {
-        margin: 20px 0;
-        padding: 20px;
+        margin: 16px 0;
+        padding: 16px;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        animation: slideIn 0.3s ease-out;
+        border-radius: 10px;
+        animation: slideIn 0.25s ease-out;
       }
       
       @keyframes slideIn {
@@ -775,15 +782,15 @@ class FloatingUI {
       .tasks-list {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        margin-top: 16px;
+        gap: 8px;
+        margin-top: 12px;
       }
 
       .task-item {
         display: flex;
         align-items: flex-start;
-        gap: 12px;
-        padding: 12px;
+        gap: 10px;
+        padding: 10px 12px;
         border-radius: 8px;
         transition: all 0.2s ease;
         cursor: pointer;
@@ -1042,13 +1049,33 @@ class FloatingUI {
     const closeLight = document.createElement('div');
     closeLight.className = 'traffic-light close';
     closeLight.title = 'Close';
-    closeLight.addEventListener('click', () => this.closeMainWindow());
+    closeLight.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeMainWindow();
+    });
     const minimizeLight = document.createElement('div');
     minimizeLight.className = 'traffic-light minimize';
     minimizeLight.title = 'Minimize';
+    minimizeLight.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeMainWindow(); // Minimize = close for now
+    });
     const maximizeLight = document.createElement('div');
     maximizeLight.className = 'traffic-light maximize';
     maximizeLight.title = 'Maximize';
+    maximizeLight.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Toggle between default and maximized size
+      const rect = this.mainWindow.getBoundingClientRect();
+      if (rect.width < 800) {
+        this.mainWindow.style.width = '90vw';
+        this.mainWindow.style.height = '90vh';
+      } else {
+        this.mainWindow.style.width = '600px';
+        this.mainWindow.style.height = '600px';
+      }
+      this.saveWindowSize();
+    });
     trafficLights.appendChild(closeLight);
     trafficLights.appendChild(minimizeLight);
     trafficLights.appendChild(maximizeLight);
@@ -1073,7 +1100,8 @@ class FloatingUI {
       </svg>
     `;
     writingModeBtn.title = 'Writing Mode';
-    writingModeBtn.addEventListener('click', () => {
+    writingModeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       this.toggleWritingMode();
     });
     
@@ -1087,6 +1115,11 @@ class FloatingUI {
       </svg>
     `;
     menuBtn.title = 'Menu';
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Could add menu dropdown here
+      console.log('Menu clicked');
+    });
     
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'window-btn';
@@ -1097,7 +1130,8 @@ class FloatingUI {
       </svg>
     `;
     settingsBtn.title = 'Settings';
-    settingsBtn.addEventListener('click', () => {
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       chrome.tabs.create({ url: chrome.runtime.getURL('src/ui/settings/settings.html') });
     });
     
@@ -1194,6 +1228,11 @@ class FloatingUI {
       </svg>
     `;
     micBtn.title = 'Voice input';
+    micBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Voice input could be added here
+      console.log('Voice input clicked');
+    });
     
     const mentionBtn = document.createElement('button');
     mentionBtn.className = 'input-icon-btn';
@@ -1206,6 +1245,11 @@ class FloatingUI {
       </svg>
     `;
     mentionBtn.title = 'Mention';
+    mentionBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Mention functionality could be added here
+      console.log('Mention clicked');
+    });
     
     const sendBtn = document.createElement('button');
     sendBtn.className = 'send-btn';
@@ -1231,7 +1275,8 @@ class FloatingUI {
       input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     });
     
-    sendBtn.addEventListener('click', () => {
+    sendBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       this.sendMessage(input.value);
       input.value = '';
       input.style.height = 'auto';
@@ -1279,6 +1324,11 @@ class FloatingUI {
       if (backdropClickTimeout) {
         clearTimeout(backdropClickTimeout);
       }
+    });
+    
+    // Ensure window is clickable when visible
+    this.mainWindow.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
     });
     
     this.shadowRoot.appendChild(this.backdrop);
@@ -1484,6 +1534,7 @@ class FloatingUI {
       requestAnimationFrame(() => {
         if (this.mainWindow && this.backdrop) {
           this.mainWindow.classList.add('visible');
+          this.mainWindow.style.pointerEvents = 'auto'; // Ensure it's clickable
           this.backdrop.classList.add('visible');
         }
       });
@@ -1567,9 +1618,12 @@ class FloatingUI {
     this.isWindowOpen = false;
     if (this.mainWindow) {
       this.mainWindow.classList.remove('visible');
+      this.mainWindow.style.opacity = '0';
+      this.mainWindow.style.pointerEvents = 'none';
     }
     if (this.backdrop) {
       this.backdrop.classList.remove('visible');
+      this.backdrop.style.pointerEvents = 'none'; // Ensure it doesn't block
     }
     
     // Keep elements in DOM but hidden for faster reopening
