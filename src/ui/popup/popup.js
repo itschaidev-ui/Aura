@@ -1,17 +1,25 @@
-// src/ui/sidepanel/sidepanel.js
-class SidePanel {
+// src/ui/popup/popup.js
+class PopupChatbot {
   constructor() {
     this.messages = [];
     this.currentTabId = null;
     this.isLoading = false;
     this.currentContext = null;
+    this.selectedModel = 'chatgpt'; // Default model - ChatGPT
     this.init();
   }
 
   async init() {
     // Get current tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    this.currentTabId = tab.id;
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      this.currentTabId = tab.id;
+    } catch (e) {
+      console.log('Could not get current tab:', e);
+    }
+
+    // Load saved model preference
+    await this.loadModelPreference();
 
     // Load conversation history
     await this.loadConversation();
@@ -24,40 +32,26 @@ class SidePanel {
       this.handleMessage(message);
     });
     
-    // Initial context update
-    this.updateContext(tab.url, tab.title);
-    
-    // Request fresh context
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'GET_PAGE_CONTEXT',
-        tabId: this.currentTabId
-      });
-      if (response && response.context) {
-        this.currentContext = response.context;
-        this.updateContext(response.context.url, response.context.title);
+    // Request fresh context if we have a tab
+    if (this.currentTabId) {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: 'GET_PAGE_CONTEXT',
+          tabId: this.currentTabId
+        });
+        if (response && response.context) {
+          this.currentContext = response.context;
+        }
+      } catch (e) {
+        console.log('Failed to get context', e);
       }
-    } catch (e) {
-      console.log('Failed to get context', e);
     }
   }
 
   setupEventListeners() {
     const sendBtn = document.getElementById('send-btn');
     const input = document.getElementById('message-input');
-    const quickActions = document.querySelectorAll('.quick-action-btn');
-    const settingsBtn = document.getElementById('settings-btn');
-
-    // Writing mode button
-    const writingModeBtn = document.getElementById('writing-mode-btn');
-    if (writingModeBtn) {
-      writingModeBtn.addEventListener('click', () => this.toggleWritingMode());
-    }
-    
-    // Settings button
-    if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => this.openSettings());
-    }
+    const modelSelect = document.getElementById('model-select');
 
     // Send button
     sendBtn.addEventListener('click', () => this.sendMessage());
@@ -73,35 +67,39 @@ class SidePanel {
     // Auto-resize textarea
     input.addEventListener('input', () => {
       input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      input.style.height = Math.min(input.scrollHeight, 100) + 'px';
     });
 
-    // Quick action buttons
-    quickActions.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const action = e.target.dataset.action;
-        this.handleQuickAction(action);
-      });
+    // Model selection
+    modelSelect.addEventListener('change', (e) => {
+      this.selectedModel = e.target.value;
+      this.saveModelPreference();
     });
+
+    // Focus input on load
+    input.focus();
   }
 
-  updateContext(url, title) {
-    const indicator = document.getElementById('context-indicator');
-    const text = indicator.querySelector('.context-text');
-    const dot = indicator.querySelector('.context-dot');
-    
+  async loadModelPreference() {
     try {
-      if (title) {
-        text.textContent = `Reading: ${title.substring(0, 30)}${title.length > 30 ? '...' : ''}`;
-      } else {
-        const urlObj = new URL(url);
-        const domain = urlObj.hostname.replace('www.', '');
-        text.textContent = `Reading ${domain}...`;
+      const result = await chrome.storage.local.get(['selectedModel']);
+      if (result.selectedModel) {
+        this.selectedModel = result.selectedModel;
+        const modelSelect = document.getElementById('model-select');
+        if (modelSelect) {
+          modelSelect.value = this.selectedModel;
+        }
       }
-      
-      dot.style.background = 'var(--success)';
-    } catch (e) {
-      text.textContent = 'Ready';
+    } catch (error) {
+      console.error('Failed to load model preference:', error);
+    }
+  }
+
+  async saveModelPreference() {
+    try {
+      await chrome.storage.local.set({ selectedModel: this.selectedModel });
+    } catch (error) {
+      console.error('Failed to save model preference:', error);
     }
   }
 
@@ -109,7 +107,7 @@ class SidePanel {
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'GET_CONVERSATION',
-        tabId: this.currentTabId
+        tabId: this.currentTabId || null
       });
 
       if (response && response.conversation) {
@@ -119,26 +117,6 @@ class SidePanel {
     } catch (error) {
       console.error('Failed to load conversation:', error);
     }
-  }
-
-  async handleQuickAction(action) {
-    const input = document.getElementById('message-input');
-    
-    switch (action) {
-      case 'summarize':
-        input.value = 'Summarize this page for me';
-        break;
-      case 'explain':
-        input.value = 'Explain the key points on this page';
-        break;
-    }
-    
-    input.focus();
-    input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-    
-    // Auto-send after a brief delay
-    setTimeout(() => this.sendMessage(), 100);
   }
 
   async sendMessage() {
@@ -158,8 +136,6 @@ class SidePanel {
     input.value = '';
     input.style.height = 'auto';
     
-    // Save as draft if needed (writing mode could be added here too)
-
     // Add streaming message container
     const assistantMsgId = `msg-${Date.now()}`;
     const assistantMsg = document.createElement('div');
@@ -186,7 +162,7 @@ class SidePanel {
       } else if (message.type === 'STREAM_COMPLETE') {
         fullText = message.response;
         streamingText.innerHTML = this.formatMessage(fullText);
-        streamingCursor.remove(); // Remove cursor when complete
+        streamingCursor.remove();
         assistantMsg.id = '';
         chrome.runtime.onMessage.removeListener(streamListener);
         // Final aggressive auto-scroll after completion
@@ -199,9 +175,6 @@ class SidePanel {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }, 200);
         });
-        
-        // Detect tasks
-        this.detectAndDisplayTasks(fullText);
       }
     };
     
@@ -213,7 +186,8 @@ class SidePanel {
         type: 'STREAM_MESSAGE',
         data: {
           prompt: text,
-          context: this.currentContext
+          context: this.currentContext,
+          model: this.selectedModel
         },
         tabId: this.currentTabId
       });
@@ -232,7 +206,8 @@ class SidePanel {
           type: 'SEND_MESSAGE',
           data: {
             prompt: text,
-            context: this.currentContext
+            context: this.currentContext,
+            model: this.selectedModel
           },
           tabId: this.currentTabId
         });
@@ -242,7 +217,6 @@ class SidePanel {
         }
 
         this.addMessage('assistant', aiResponse.response);
-        this.detectAndDisplayTasks(aiResponse.response);
         // Ensure scroll after non-streaming response
         requestAnimationFrame(() => {
           const container = document.getElementById('messages');
@@ -263,81 +237,6 @@ class SidePanel {
       input.focus();
     }
   }
-  
-  async detectAndDisplayTasks(text) {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'DETECT_TASKS',
-        text: text
-      });
-      
-      if (response && response.tasks && response.tasks.length > 0) {
-        // Display tasks in side panel
-        this.displayTasks(response.tasks);
-      }
-    } catch (e) {
-      console.log('Task detection failed', e);
-    }
-  }
-  
-  displayTasks(tasks) {
-    // Add tasks section to side panel
-    let tasksSection = document.getElementById('tasks-section');
-    if (!tasksSection) {
-      tasksSection = document.createElement('div');
-      tasksSection.id = 'tasks-section';
-      tasksSection.className = 'tasks-section';
-      tasksSection.innerHTML = '<h3>Tasks</h3><div class="tasks-list"></div>';
-      const chatContainer = document.getElementById('chat-container');
-      chatContainer.insertBefore(tasksSection, chatContainer.firstChild);
-    }
-    
-    const tasksList = tasksSection.querySelector('.tasks-list');
-    tasks.forEach(task => {
-      const taskItem = document.createElement('div');
-      taskItem.className = 'task-item';
-      taskItem.innerHTML = `
-        <input type="checkbox" class="task-checkbox">
-        <span class="task-text">${task.text}</span>
-      `;
-      
-      taskItem.querySelector('.task-checkbox').addEventListener('change', (e) => {
-        if (e.target.checked) {
-          taskItem.classList.add('completed');
-        } else {
-          taskItem.classList.remove('completed');
-        }
-      });
-      
-      tasksList.appendChild(taskItem);
-    });
-  }
-
-  showTypingIndicator() {
-    const messagesContainer = document.getElementById('messages');
-    const typingDiv = document.createElement('div');
-    const id = `typing-${Date.now()}`;
-    typingDiv.id = id;
-    typingDiv.className = 'message assistant typing';
-    
-    for (let i = 0; i < 3; i++) {
-      const dot = document.createElement('div');
-      dot.className = 'typing-dot';
-      typingDiv.appendChild(dot);
-    }
-    
-    messagesContainer.appendChild(typingDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    
-    return id;
-  }
-
-  removeTypingIndicator(id) {
-    const typingDiv = document.getElementById(id);
-    if (typingDiv) {
-      typingDiv.remove();
-    }
-  }
 
   addMessage(role, content, isError = false) {
     const messagesContainer = document.getElementById('messages');
@@ -355,7 +254,7 @@ class SidePanel {
       messageDiv.style.borderLeft = '3px solid var(--error)';
     }
     
-    // Format message content (basic markdown-like formatting)
+    // Format message content
     messageDiv.innerHTML = this.formatMessage(content);
     
     messagesContainer.appendChild(messageDiv);
@@ -417,38 +316,10 @@ class SidePanel {
   handleMessage(message) {
     if (message.type === 'NEW_RESPONSE') {
       this.addMessage('assistant', message.data);
-    } else if (message.type === 'CONTEXT_UPDATED') {
-      // Background script notified us of context update
-      // We could fetch new context here, but we'll wait for next interaction
-    }
-  }
-  
-  openSettings() {
-    // Open settings in a new tab or side panel
-    chrome.tabs.create({
-      url: chrome.runtime.getURL('src/ui/settings/settings.html')
-    });
-  }
-  
-  async toggleWritingMode() {
-    const container = document.querySelector('.sidepanel-container');
-    const isWritingMode = container?.classList.toggle('writing-mode');
-    const writingModeBtn = document.getElementById('writing-mode-btn');
-    const input = document.getElementById('message-input');
-    
-    if (isWritingMode) {
-      writingModeBtn?.classList.add('active');
-      if (input) {
-        input.placeholder = 'Write with Aura... (I\'ll remember your style)';
-      }
-    } else {
-      writingModeBtn?.classList.remove('active');
-      if (input) {
-        input.placeholder = 'Ask Aura anything about this page...';
-      }
     }
   }
 }
 
 // Initialize
-new SidePanel();
+new PopupChatbot();
+

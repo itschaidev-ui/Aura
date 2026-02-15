@@ -56,6 +56,18 @@ export class MessageHandler {
           this.handleGetIntegrations(sendResponse);
           break;
         
+        case 'OPEN_TAB':
+          this.handleOpenTab(message.data, sendResponse);
+          break;
+        
+        case 'GET_ALL_TABS':
+          this.handleGetAllTabs(sendResponse);
+          break;
+        
+        case 'GET_TAB_CONTENT':
+          this.handleGetTabContent(message.data, sendResponse);
+          break;
+        
         default:
           console.warn(`Unknown message type: ${message.type}`);
           sendResponse({ error: `Unknown message type: ${message.type}` });
@@ -68,7 +80,8 @@ export class MessageHandler {
 
   async handleGetPageContext(tabId, sendResponse) {
     if (!tabId) {
-      sendResponse({ error: 'No tab ID provided' });
+      // Return empty context for popup without tab
+      sendResponse({ context: { url: '', title: 'General Chat' } });
       return;
     }
     
@@ -94,24 +107,68 @@ export class MessageHandler {
   }
 
   async handleSendMessage(data, tabId, sendResponse) {
-    if (!tabId) {
-      sendResponse({ error: 'No tab ID provided' });
-      return;
-    }
+    // Use 'popup' as conversation ID if no tabId (for popup without tab context)
+    const conversationId = tabId || 'popup';
 
-    const { prompt, context } = data;
+    const { prompt, context, model } = data;
     
     try {
       // Save user message immediately
-      const conversation = await this.stateManager.getConversation(tabId);
+      const conversation = await this.stateManager.getConversation(conversationId);
       conversation.push({ role: 'user', content: prompt });
-      await this.stateManager.saveConversation(tabId, conversation);
+      await this.stateManager.saveConversation(conversationId, conversation);
+      
+      // Check for tab management commands
+      const openTabMatch = prompt.match(/open\s+(?:tab\s+for\s+)?(?:the\s+)?(?:url\s+)?(https?:\/\/[^\s]+)/i);
+      if (openTabMatch) {
+        const url = openTabMatch[1];
+        const tab = await chrome.tabs.create({ url });
+        const response = `I've opened a new tab with the URL: ${url}`;
+        conversation.push({ role: 'assistant', content: response });
+        await this.stateManager.saveConversation(conversationId, conversation);
+        sendResponse({ response, action: 'tab_opened', tabId: tab.id });
+        return;
+      }
+
+      const listTabsMatch = prompt.match(/list\s+(?:all\s+)?tabs|show\s+(?:all\s+)?tabs|what\s+tabs/i);
+      if (listTabsMatch) {
+        const tabs = await chrome.tabs.query({});
+        const tabList = tabs.map((tab, index) => `${index + 1}. ${tab.title} - ${tab.url}`).join('\n');
+        const response = `Here are your open tabs:\n\n${tabList}`;
+        conversation.push({ role: 'assistant', content: response });
+        await this.stateManager.saveConversation(conversationId, conversation);
+        sendResponse({ response });
+        return;
+      }
+
+      const checkTabMatch = prompt.match(/check\s+(?:tab|page)\s+(\d+)|what's\s+in\s+tab\s+(\d+)/i);
+      if (checkTabMatch) {
+        const tabNum = parseInt(checkTabMatch[1] || checkTabMatch[2]);
+        const tabs = await chrome.tabs.query({});
+        if (tabNum > 0 && tabNum <= tabs.length) {
+          const targetTab = tabs[tabNum - 1];
+          let content = `Tab ${tabNum}: ${targetTab.title}\nURL: ${targetTab.url}`;
+          try {
+            const tabContent = await chrome.tabs.sendMessage(targetTab.id, { type: 'GET_CONTEXT' });
+            if (tabContent && tabContent.context) {
+              content += `\n\nContent preview available.`;
+            }
+          } catch (e) {
+            // Content script not available
+          }
+          const response = content;
+          conversation.push({ role: 'assistant', content: response });
+          await this.stateManager.saveConversation(conversationId, conversation);
+          sendResponse({ response });
+          return;
+        }
+      }
       
       // Format prompt with context if available
       let finalPrompt = prompt;
       let imageData = null;
 
-      if (context) {
+      if (context && tabId) {
         // Capture screenshot if this is a visual question (enhanced heuristic)
         const visualKeywords = /look|see|image|screenshot|visual|picture|screen|chart|graph|diagram|what.*show|describe.*appearance|how.*look/i;
         const isVisualQuestion = visualKeywords.test(prompt);
@@ -130,22 +187,26 @@ export class MessageHandler {
         }
 
         // Format the text prompt with context using ContextProcessor
-        try {
-          const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
-          finalPrompt = formatted;
-        } catch (e) {
-          console.warn('Context formatting failed, using prompt without context:', e);
-          // Fallback to original prompt if formatting fails
+        // Only add context if it's meaningful (not just "Unknown" or "Untitled")
+        if (context.url && context.url !== 'Unknown' && context.title && context.title !== 'Untitled') {
+          try {
+            const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
+            finalPrompt = formatted;
+          } catch (e) {
+            console.warn('Context formatting failed, using prompt without context:', e);
+            // Fallback to original prompt if formatting fails
+          }
         }
+        // If context is empty/unknown, just use the original prompt
       }
       
-      // Call API
-      const response = await this.apiClient.callOpenAIAPI(finalPrompt, imageData);
-      
+      // Call API with user's preferred model
+      const response = await this.apiClient.callOpenAIAPI(finalPrompt, imageData, model);
+
       // Save assistant response
       conversation.push({ role: 'assistant', content: response });
-      await this.stateManager.saveConversation(tabId, conversation);
-      
+      await this.stateManager.saveConversation(conversationId, conversation);
+
       sendResponse({ response });
     } catch (error) {
       sendResponse({ error: error.message });
@@ -153,24 +214,83 @@ export class MessageHandler {
   }
 
   async handleStreamMessage(data, tabId, sendResponse) {
-    if (!tabId) {
-      sendResponse({ error: 'No tab ID provided' });
-      return;
-    }
+    // Use 'popup' as conversation ID if no tabId (for popup without tab context)
+    const conversationId = tabId || 'popup';
 
-    const { prompt, context } = data;
+    const { prompt, context, model } = data;
     
     try {
       // Save user message immediately
-      const conversation = await this.stateManager.getConversation(tabId);
+      const conversation = await this.stateManager.getConversation(conversationId);
       conversation.push({ role: 'user', content: prompt });
-      await this.stateManager.saveConversation(tabId, conversation);
+      await this.stateManager.saveConversation(conversationId, conversation);
+      
+      // Check for tab management commands (same as handleSendMessage)
+      const openTabMatch = prompt.match(/open\s+(?:tab\s+for\s+)?(?:the\s+)?(?:url\s+)?(https?:\/\/[^\s]+)/i);
+      if (openTabMatch) {
+        const url = openTabMatch[1];
+        const tab = await chrome.tabs.create({ url });
+        const response = `I've opened a new tab with the URL: ${url}`;
+        conversation.push({ role: 'assistant', content: response });
+        await this.stateManager.saveConversation(conversationId, conversation);
+        chrome.runtime.sendMessage({
+          type: 'STREAM_COMPLETE',
+          tabId: tabId,
+          response: response
+        }).catch(() => {});
+        sendResponse({ streaming: false, response });
+        return;
+      }
+
+      const listTabsMatch = prompt.match(/list\s+(?:all\s+)?tabs|show\s+(?:all\s+)?tabs|what\s+tabs/i);
+      if (listTabsMatch) {
+        const tabs = await chrome.tabs.query({});
+        const tabList = tabs.map((tab, index) => `${index + 1}. ${tab.title} - ${tab.url}`).join('\n');
+        const response = `Here are your open tabs:\n\n${tabList}`;
+        conversation.push({ role: 'assistant', content: response });
+        await this.stateManager.saveConversation(conversationId, conversation);
+        chrome.runtime.sendMessage({
+          type: 'STREAM_COMPLETE',
+          tabId: tabId,
+          response: response
+        }).catch(() => {});
+        sendResponse({ streaming: false, response });
+        return;
+      }
+
+      const checkTabMatch = prompt.match(/check\s+(?:tab|page)\s+(\d+)|what's\s+in\s+tab\s+(\d+)/i);
+      if (checkTabMatch) {
+        const tabNum = parseInt(checkTabMatch[1] || checkTabMatch[2]);
+        const tabs = await chrome.tabs.query({});
+        if (tabNum > 0 && tabNum <= tabs.length) {
+          const targetTab = tabs[tabNum - 1];
+          let content = `Tab ${tabNum}: ${targetTab.title}\nURL: ${targetTab.url}`;
+          try {
+            const tabContent = await chrome.tabs.sendMessage(targetTab.id, { type: 'GET_CONTEXT' });
+            if (tabContent && tabContent.context) {
+              content += `\n\nContent preview available.`;
+            }
+          } catch (e) {
+            // Content script not available
+          }
+          const response = content;
+          conversation.push({ role: 'assistant', content: response });
+          await this.stateManager.saveConversation(conversationId, conversation);
+          chrome.runtime.sendMessage({
+            type: 'STREAM_COMPLETE',
+            tabId: tabId,
+            response: response
+          }).catch(() => {});
+          sendResponse({ streaming: false, response });
+          return;
+        }
+      }
       
       // Format prompt with context if available
       let finalPrompt = prompt;
       let imageData = null;
 
-      if (context) {
+      if (context && tabId) {
         // Enhanced visual question detection
         const visualKeywords = /look|see|image|screenshot|visual|picture|screen|chart|graph|diagram|what.*show|describe.*appearance|how.*look/i;
         const isVisualQuestion = visualKeywords.test(prompt);
@@ -189,16 +309,20 @@ export class MessageHandler {
         }
 
         // Format context using ContextProcessor
-        try {
-          const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
-          finalPrompt = formatted;
-        } catch (e) {
-          console.warn('Context formatting failed during streaming, using prompt without context:', e);
-          // Fallback to original prompt if formatting fails
+        // Only add context if it's meaningful (not just "Unknown" or "Untitled")
+        if (context.url && context.url !== 'Unknown' && context.title && context.title !== 'Untitled') {
+          try {
+            const formatted = ContextProcessor.createQuestionPrompt(prompt, context);
+            finalPrompt = formatted;
+          } catch (e) {
+            console.warn('Context formatting failed during streaming, using prompt without context:', e);
+            // Fallback to original prompt if formatting fails
+          }
         }
+        // If context is empty/unknown, just use the original prompt
       }
       
-      // Stream response
+      // Stream response with user's preferred model
       let fullResponse = '';
       await this.apiClient.streamResponse(
         finalPrompt,
@@ -216,15 +340,16 @@ export class MessageHandler {
         (complete) => {
           // Save complete response
           conversation.push({ role: 'assistant', content: complete });
-          this.stateManager.saveConversation(tabId, conversation);
-          
+          this.stateManager.saveConversation(conversationId, conversation);
+
           // Send completion message
           chrome.runtime.sendMessage({
             type: 'STREAM_COMPLETE',
             tabId: tabId,
             response: complete
           }).catch(() => {});
-        }
+        },
+        model
       );
       
       sendResponse({ streaming: true });
@@ -249,12 +374,10 @@ export class MessageHandler {
   }
   
   async handleGetConversation(tabId, sendResponse) {
-    if (!tabId) {
-      sendResponse({ conversation: [] });
-      return;
-    }
+    // Use 'popup' as conversation ID if no tabId (for popup without tab context)
+    const conversationId = tabId || 'popup';
     
-    const conversation = await this.stateManager.getConversation(tabId);
+    const conversation = await this.stateManager.getConversation(conversationId);
     sendResponse({ conversation });
   }
   
@@ -300,6 +423,72 @@ export class MessageHandler {
       sendResponse({ integrations: connected });
     } catch (error) {
       sendResponse({ integrations: [], error: error.message });
+    }
+  }
+
+  async handleOpenTab(data, sendResponse) {
+    try {
+      const { url } = data;
+      if (!url) {
+        sendResponse({ error: 'URL is required' });
+        return;
+      }
+      
+      const tab = await chrome.tabs.create({ url });
+      sendResponse({ success: true, tabId: tab.id });
+    } catch (error) {
+      sendResponse({ error: error.message });
+    }
+  }
+
+  async handleGetAllTabs(sendResponse) {
+    try {
+      const tabs = await chrome.tabs.query({});
+      const tabInfo = tabs.map(tab => ({
+        id: tab.id,
+        title: tab.title,
+        url: tab.url,
+        active: tab.active
+      }));
+      sendResponse({ tabs: tabInfo });
+    } catch (error) {
+      sendResponse({ tabs: [], error: error.message });
+    }
+  }
+
+  async handleGetTabContent(data, sendResponse) {
+    try {
+      const { tabId } = data;
+      if (!tabId) {
+        sendResponse({ error: 'Tab ID is required' });
+        return;
+      }
+      
+      // Get tab info
+      const tab = await chrome.tabs.get(tabId);
+      
+      // Try to get content from the tab
+      let content = null;
+      try {
+        const response = await chrome.tabs.sendMessage(tabId, { type: 'GET_CONTEXT' });
+        if (response && response.context) {
+          content = response.context;
+        }
+      } catch (e) {
+        // Content script might not be available
+        console.log('Could not get tab content:', e);
+      }
+      
+      sendResponse({
+        tab: {
+          id: tab.id,
+          title: tab.title,
+          url: tab.url
+        },
+        content: content
+      });
+    } catch (error) {
+      sendResponse({ error: error.message });
     }
   }
 }
