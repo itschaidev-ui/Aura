@@ -16,30 +16,17 @@
     <div class="settings-content">
       <!-- AI Provider Section -->
       <section class="settings-section">
-        <h2>AI Provider</h2>
+        <h2>AI Provider - GROQ</h2>
         <div class="setting-item">
-          <label for="ai-provider">Primary AI Provider</label>
-          <select id="ai-provider" class="setting-input">
-            <option value="gemini">Gemini (Google) - Configured</option>
-            <option value="openai">OpenAI (ChatGPT)</option>
-          </select>
-          <p class="setting-hint">Gemini API key is pre-configured and locked for security.</p>
-        </div>
-      </section>
-
-      <!-- OpenAI API Key (Optional) -->
-      <section class="settings-section">
-        <h2>OpenAI API Key (Optional)</h2>
-        <div class="setting-item">
-          <label for="openai-key">OpenAI API Key</label>
-          <input 
-            type="password" 
-            id="openai-key" 
-            class="setting-input" 
-            placeholder="sk-..."
+          <label for="groq-key">GROQ API Key</label>
+          <input
+            type="password"
+            id="groq-key"
+            class="setting-input"
+            placeholder="gsk_..."
           >
-          <p class="setting-hint">Only needed if you want to use ChatGPT instead of Gemini.</p>
-          <button id="save-openai" class="btn-primary">Save OpenAI Key</button>
+          <p class="setting-hint">Enter your GROQ API key to use the AI assistant.</p>
+          <button id="save-groq" class="btn-primary">Save GROQ Key</button>
         </div>
       </section>
 

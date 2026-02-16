@@ -1,34 +1,41 @@
 // src/background/api-client.js
 export class ApiClient {
   constructor() {
-    // Set default API key immediately
-    this.openaiApiKey = 'sk-pygqmCP3fElXfjSCy0Bl1oLe01LRBC1EwmNp1eNM6WHDsLwR';
+    // GROQ API key will be loaded from Chrome storage
+    this.groqApiKey = null;
+    this.openaiApiKey = null;
     this.geminiApiKey = null;
-    this.preferredProvider = 'chatgpt'; // Only using ChatGPT
+    this.preferredProvider = 'groq'; // Only using GROQ
+    this.baseUrl = 'https://api.groq.com/openai/v1';
+    this.model = 'llama-3.1-70b-versatile';
     this.loadConfig();
   }
 
   async loadConfig() {
-    const config = await chrome.storage.local.get(['openaiApiKey', 'geminiApiKey', 'preferredAIProvider']);
-    // Only override if user has saved a custom key
-    if (config.openaiApiKey) {
-      this.openaiApiKey = config.openaiApiKey;
-    }
+    const config = await chrome.storage.local.get(['groqApiKey', 'openaiApiKey', 'geminiApiKey', 'preferredAIProvider']);
+    this.groqApiKey = config.groqApiKey;
+    this.openaiApiKey = config.openaiApiKey;
     this.geminiApiKey = config.geminiApiKey;
-    this.preferredProvider = config.preferredAIProvider || 'chatgpt';
+    this.preferredProvider = config.preferredAIProvider || 'groq';
+
+    // If no GROQ key is saved, save the default one
+    if (!this.groqApiKey) {
+      // User needs to configure their API key in settings
+      console.log('No GROQ API key configured. Please add your API key in the extension settings.');
+    }
   }
 
   async callOpenAIAPI(prompt, imageData = null, preferredModel = null) {
     // Reload config to ensure we have the latest keys
     await this.loadConfig();
 
-    // Only use ChatGPT - user requested to remove other models
-    if (this.openaiApiKey) {
+    // Only use GROQ - user requested to use GROQ only
+    if (this.groqApiKey) {
       try {
-        return await this.callChatGPTAPI(prompt, imageData);
+        return await this.callGroqAPI(prompt, imageData);
       } catch (error) {
-        console.log('ChatGPT failed, using fallback:', error);
-        // Fallback to free API if ChatGPT fails
+        console.log('GROQ failed, using fallback:', error);
+        // Fallback to free API if GROQ fails
         return this.callFreeAPI(prompt, imageData);
       }
     }
@@ -263,6 +270,90 @@ export class ApiClient {
     }
   }
 
+  async streamGroqResponse(prompt, imageData, onChunk, onComplete) {
+    if (!this.groqApiKey) {
+      throw new Error('GROQ API key not configured');
+    }
+
+    const url = `${this.baseUrl}/chat/completions`;
+
+    const messages = [
+      {
+        role: 'system',
+        content: 'You are Aura, a helpful AI assistant. Answer questions directly and conversationally. Focus on being helpful and concise - do not list or enumerate page content unless specifically asked. Provide natural, friendly responses.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ];
+
+    const payload = {
+      model: this.model,
+      messages: messages,
+      max_tokens: 2000,
+      temperature: 0.7,
+      top_p: 0.95,
+      stream: true
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.groqApiKey.trim()}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || response.statusText;
+        throw new Error(`GROQ API error: ${response.status} - ${errorMessage}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              if (onComplete) onComplete(fullResponse);
+              return fullResponse;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullResponse += content;
+                onChunk(content);
+              }
+            } catch (e) {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
+        }
+      }
+
+      if (onComplete) onComplete(fullResponse);
+      return fullResponse;
+    } catch (error) {
+      console.error('GROQ streaming failed:', error);
+      throw error;
+    }
+  }
+
   async callFreeAPI(prompt, imageData = null) {
     // Use Hugging Face Inference API - free tier, no API key required
     const url = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2';
@@ -419,13 +510,13 @@ Assistant:`;
     // Reload config to ensure we have the latest keys
     await this.loadConfig();
 
-    // Only use ChatGPT - user requested to remove other models
-    if (this.openaiApiKey) {
+    // Only use GROQ - user requested to use GROQ only
+    if (this.groqApiKey) {
       try {
-        return await this.streamChatGPTResponse(prompt, imageData, onChunk, onComplete);
+        return await this.streamGroqResponse(prompt, imageData, onChunk, onComplete);
       } catch (error) {
-        console.log('ChatGPT streaming failed, using fallback:', error);
-        // Fallback to free API if ChatGPT fails
+        console.log('GROQ streaming failed, using fallback:', error);
+        // Fallback to free API if GROQ fails
         return this.streamFreeAPI(prompt, imageData, onChunk, onComplete);
       }
     }

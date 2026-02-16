@@ -5,7 +5,7 @@ class PopupChatbot {
     this.currentTabId = null;
     this.isLoading = false;
     this.currentContext = null;
-    this.selectedModel = 'chatgpt'; // Default model - ChatGPT
+    this.selectedModel = 'groq'; // Default model - GROQ
     this.init();
   }
 

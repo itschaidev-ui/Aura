@@ -12,6 +12,7 @@ class Settings {
 
   async loadSettings() {
     const config = await chrome.storage.local.get([
+      'groqApiKey',
       'openaiApiKey',
       'geminiApiKey',
       'preferredAIProvider',
@@ -21,17 +22,11 @@ class Settings {
       'geminiKeyLocked'
     ]);
 
-    // Set AI provider dropdown
-    const providerSelect = document.getElementById('ai-provider');
-    if (providerSelect) {
-      providerSelect.value = config.preferredAIProvider || 'gemini';
-    }
-
-    // Load OpenAI key (if set, show masked version)
-    const openaiInput = document.getElementById('openai-key');
-    if (openaiInput && config.openaiApiKey) {
-      openaiInput.value = '••••••••' + config.openaiApiKey.slice(-4);
-      openaiInput.dataset.hasValue = 'true';
+    // Load GROQ key (if set, show masked version)
+    const groqInput = document.getElementById('groq-key');
+    if (groqInput && config.groqApiKey) {
+      groqInput.value = '••••••••' + config.groqApiKey.slice(-4);
+      groqInput.dataset.hasValue = 'true';
     }
 
     // Load integration tokens (masked)
@@ -70,18 +65,10 @@ class Settings {
   }
 
   setupEventListeners() {
-    // AI Provider
-    const providerSelect = document.getElementById('ai-provider');
-    if (providerSelect) {
-      providerSelect.addEventListener('change', (e) => {
-        this.saveAIProvider(e.target.value);
-      });
-    }
-
-    // OpenAI Key
-    const saveOpenAI = document.getElementById('save-openai');
-    if (saveOpenAI) {
-      saveOpenAI.addEventListener('click', () => this.saveOpenAIKey());
+    // GROQ Key
+    const saveGroq = document.getElementById('save-groq');
+    if (saveGroq) {
+      saveGroq.addEventListener('click', () => this.saveGroqKey());
     }
 
     // Slack
@@ -117,8 +104,8 @@ class Settings {
     this.showStatus('AI provider updated to ' + (provider === 'gemini' ? 'Gemini' : 'OpenAI'), 'success');
   }
 
-  async saveOpenAIKey() {
-    const input = document.getElementById('openai-key');
+  async saveGroqKey() {
+    const input = document.getElementById('groq-key');
     let key = input.value.trim();
 
     // If it's a masked value, don't update
@@ -127,15 +114,15 @@ class Settings {
       return;
     }
 
-    if (!key || !key.startsWith('sk-')) {
-      this.showStatus('Invalid OpenAI API key. Keys should start with "sk-"', 'error');
+    if (!key || !key.startsWith('gsk_')) {
+      this.showStatus('Invalid GROQ API key. Keys should start with "gsk_"', 'error');
       return;
     }
 
-    await chrome.storage.local.set({ openaiApiKey: key });
+    await chrome.storage.local.set({ groqApiKey: key });
     input.value = '••••••••' + key.slice(-4);
     input.dataset.hasValue = 'true';
-    this.showStatus('OpenAI API key saved successfully!', 'success');
+    this.showStatus('GROQ API key saved successfully!', 'success');
   }
 
   showSlackConfig() {
