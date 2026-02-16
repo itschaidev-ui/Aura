@@ -13,15 +13,16 @@ export class ApiClient {
 
   async loadConfig() {
     const config = await chrome.storage.local.get(['groqApiKey', 'openaiApiKey', 'geminiApiKey', 'preferredAIProvider']);
+
     this.groqApiKey = config.groqApiKey;
     this.openaiApiKey = config.openaiApiKey;
     this.geminiApiKey = config.geminiApiKey;
     this.preferredProvider = config.preferredAIProvider || 'groq';
 
-    // If no GROQ key is saved, save the default one
+    console.log('API Client configured - GROQ key present:', !!this.groqApiKey);
+
     if (!this.groqApiKey) {
-      // User needs to configure their API key in settings
-      console.log('No GROQ API key configured. Please add your API key in the extension settings.');
+      console.warn('No GROQ API key configured. Please add your API key in the extension settings (right-click extension icon → Options).');
     }
   }
 
@@ -29,19 +30,25 @@ export class ApiClient {
     // Reload config to ensure we have the latest keys
     await this.loadConfig();
 
+    console.log('callOpenAIAPI - Using GROQ');
+    console.log('GROQ API key available:', !!this.groqApiKey);
+
     // Only use GROQ - user requested to use GROQ only
     if (this.groqApiKey) {
       try {
-        return await this.callGroqAPI(prompt, imageData);
+        console.log('Attempting GROQ API call...');
+        const result = await this.callGroqAPI(prompt, imageData);
+        console.log('GROQ API call successful');
+        return result;
       } catch (error) {
-        console.log('GROQ failed, using fallback:', error);
-        // Fallback to free API if GROQ fails
-        return this.callFreeAPI(prompt, imageData);
+        console.error('GROQ API failed:', error.message);
+        // Don't use fallback - throw error so user knows GROQ failed
+        throw new Error(`GROQ API error: ${error.message}`);
       }
     }
 
-    // No API key - use fallback
-    return this.callFreeAPI(prompt, imageData);
+    // No API key
+    throw new Error('No GROQ API key configured. Please configure your API key in settings.');
   }
   
   async callChatGPTAPI(prompt, imageData = null) {
@@ -196,9 +203,18 @@ export class ApiClient {
   }
   
   async callGroqAPI(prompt, imageData = null) {
-    // Try Groq API first, fallback to free alternative if key is invalid
+    if (!this.groqApiKey) {
+      console.error('GROQ API key not configured');
+      throw new Error('GROQ API key not configured');
+    }
+
     const url = `${this.baseUrl}/chat/completions`;
-    
+
+    console.log('Calling GROQ API...');
+    console.log('URL:', url);
+    console.log('Model:', this.model);
+    console.log('API Key present:', !!this.groqApiKey);
+
     const messages = [
       {
         role: 'system',
@@ -228,44 +244,43 @@ export class ApiClient {
         body: JSON.stringify(payload)
       });
 
+      console.log('GROQ API response status:', response.status);
+
       if (!response.ok) {
-        // If 401 (unauthorized), try free alternative
-        if (response.status === 401) {
-          console.log('Groq API key invalid, falling back to free API');
-          return this.callFreeAPI(prompt, imageData);
-        }
-        
         const errorText = await response.text();
+        console.error('GROQ API error response:', errorText);
+
         let errorData;
         try {
           errorData = JSON.parse(errorText);
         } catch (e) {
           errorData = { error: { message: errorText || response.statusText } };
         }
-        
+
         const errorMessage = errorData.error?.message || errorData.message || response.statusText;
-        throw new Error(`Groq API error: ${response.status} - ${errorMessage}`);
+        console.error('GROQ API error:', response.status, errorMessage);
+        throw new Error(`GROQ API error: ${response.status} - ${errorMessage}`);
       }
 
       const data = await response.json();
-      
+      console.log('GROQ API response received:', data.choices?.length, 'choices');
+
       if (!data.choices || data.choices.length === 0) {
+        console.error('No response choices from GROQ');
         throw new Error('No response choices returned from API');
       }
 
       const choice = data.choices[0];
       if (!choice.message || !choice.message.content) {
+        console.error('Empty content in GROQ response');
         throw new Error('Empty content in API response');
       }
 
+      console.log('GROQ API call successful');
       return choice.message.content;
     } catch (error) {
-      // If it's an auth error, try free API
-      if (error.message && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
-        console.log('Groq API authentication failed, using free API');
-        return this.callFreeAPI(prompt, imageData);
-      }
-      console.error('Groq API call failed:', error);
+      console.error('GROQ API call failed:', error);
+      console.error('Error details:', error.message);
       throw error;
     }
   }
